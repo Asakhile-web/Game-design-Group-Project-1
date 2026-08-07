@@ -1,2 +1,2 @@
-# Game-design-lecture
+# Game-design-project
 learning how to install
