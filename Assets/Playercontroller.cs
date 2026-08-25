@@ -2,15 +2,17 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 public class PlayerController : MonoBehaviour
-{
+ {
     public float moveSpeed = 5f;
     public float mouseSensitivity = 2f;
+    public float interactionDistance = 3f;
 
     public Transform playerCamera;
 
     private CharacterController controller;
     private InputAction moveAction;
     private InputAction lookAction;
+    private InputAction interAction;
 
     private float xRotation = 0f;
 
@@ -22,17 +24,52 @@ public class PlayerController : MonoBehaviour
 
         moveAction = input.Player.Move;
         lookAction = input.Player.Look;
+        interAction = input.Player.Interact;
+
 
         input.Player.Enable();
+
+        if (interAction.WasPressedThisFrame())
+        {
+            Ray ray = new Ray(playerCamera.position, playerCamera.forward);
+            RaycastHit hit;
+
+            if (Physics.Raycast(ray, out hit, interactionDistance))
+            {
+                Interactable interactable = hit.collider.GetComponent<Interactable>();
+
+                if (interactable != null)
+                {
+                    interactable.Interact();
+                }
+            }
+        }
     }
 
     void Update()
     {
         Move();
         Look();
+
+    if (interAction.WasPressedThisFrame())
+        {
+        Ray ray = new Ray(playerCamera.position, playerCamera.forward);
+        RaycastHit hit;
+
+        if (Physics.Raycast(ray, out hit, interactionDistance))
+          {
+            Interactable interactable = hit.collider.GetComponent<Interactable>();
+
+            if (interactable != null)
+            {
+                interactable.Interact();
+            }
+          }
+        }
+
     }
 
-    void Move()
+void Move()
     {
         Vector2 input = moveAction.ReadValue<Vector2>();
 

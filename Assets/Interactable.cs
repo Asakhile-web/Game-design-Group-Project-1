@@ -7,5 +7,14 @@ public class Interactable : MonoBehaviour
     public void Interact()
     {
         Debug.Log(interactionMessage);
+
+        InteractionUI ui =
+    FindFirstObjectByType<InteractionUI>();
+
+        if (ui != null)
+        {
+
+            ui.ShowMessage(interactionMessage);
+        }
     }
 }
