@@ -24,7 +24,6 @@ public class PlayerController : MonoBehaviour
 
         moveAction = input.Player.Move;
         lookAction = input.Player.Look;
-        interAction = input.Player.Interact;
 
 
         input.Player.Enable();
@@ -36,38 +35,11 @@ public class PlayerController : MonoBehaviour
 
             if (Physics.Raycast(ray, out hit, interactionDistance))
             {
-                Interactable interactable = hit.collider.GetComponent<Interactable>();
-
-                if (interactable != null)
-                {
-                    interactable.Interact();
-                }
+                
             }
         }
     }
 
-    void Update()
-    {
-        Move();
-        Look();
-
-    if (interAction.WasPressedThisFrame())
-        {
-        Ray ray = new Ray(playerCamera.position, playerCamera.forward);
-        RaycastHit hit;
-
-        if (Physics.Raycast(ray, out hit, interactionDistance))
-          {
-            Interactable interactable = hit.collider.GetComponent<Interactable>();
-
-            if (interactable != null)
-            {
-                interactable.Interact();
-            }
-          }
-        }
-
-    }
 
 void Move()
     {
