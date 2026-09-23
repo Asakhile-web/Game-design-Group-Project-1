@@ -1,3 +1,4 @@
+
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -5,6 +6,7 @@ public class PlayerController : MonoBehaviour
 {
     [Header("Movement")]
     public float moveSpeed = 5f;
+
     [Header("Look")]
     public float mouseSensitivity = 2f;
     public Transform cameraTransform;
@@ -15,64 +17,112 @@ public class PlayerController : MonoBehaviour
 
     private CharacterController controller;
     private PlayerInputActions inputActions;
-    private Vector2 moveInput;
-    private float xRotation = 0f;
-    private GameObject heldObject;
 
-    void Awake()
+    private Vector2 moveInput;
+    private Vector2 lookInput;
+
+    private void Awake()
     {
         controller = GetComponent<CharacterController>();
+
         inputActions = new PlayerInputActions();
     }
-    void OnEnable()
+
+    private void OnEnable()
     {
-        inputActions.Player.Enable();
+        inputActions.Enable();
+
         inputActions.Player.Move.performed += OnMove;
         inputActions.Player.Move.canceled += OnMove;
+
+        inputActions.Player.Look.performed += OnLook;
+        inputActions.Player.Look.canceled += OnLook;
+
         inputActions.Player.Interact.performed += OnInteract;
     }
-    void OnDisable()
+
+    private void OnDisable()
     {
         inputActions.Player.Move.performed -= OnMove;
         inputActions.Player.Move.canceled -= OnMove;
+
+        inputActions.Player.Look.performed -= OnLook;
+        inputActions.Player.Look.canceled -= OnLook;
+
         inputActions.Player.Interact.performed -= OnInteract;
-        inputActions.Player.Disable();
+
+        inputActions.Disable();
     }
-    void OnMove(InputAction.CallbackContext c) { moveInput = c.ReadValue<Vector2>(); }
-    void Update()
+
+    private void OnMove(InputAction.CallbackContext context)
     {
-        Vector3 move = transform.right * moveInput.x + transform.forward * moveInput.y;
-        controller.Move(move * moveSpeed * Time.deltaTime);
-        Vector2 mouse = Mouse.current.delta.ReadValue();
-        float mouseX = mouse.x * mouseSensitivity * Time.deltaTime;
-        float mouseY = mouse.y * mouseSensitivity * Time.deltaTime;
-        xRotation -= mouseY;
-        xRotation = Mathf.Clamp(xRotation, -90f, 90f);
-        cameraTransform.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
+        moveInput = context.ReadValue<Vector2>();
+    }
+
+    private void OnLook(InputAction.CallbackContext context)
+    {
+        lookInput = context.ReadValue<Vector2>();
+    }
+
+    private void Update()
+    {
+        Move();
+        Look();
+    }
+
+    private void Move()
+    {
+        Vector3 movement =
+            transform.right * moveInput.x +
+            transform.forward * moveInput.y;
+
+        controller.Move(movement * moveSpeed * Time.deltaTime);
+    }
+
+    private void Look()
+    {
+        float mouseX = lookInput.x * mouseSensitivity * Time.deltaTime;
+        float mouseY = lookInput.y * mouseSensitivity * Time.deltaTime;
+
         transform.Rotate(Vector3.up * mouseX);
+
+        cameraTransform.Rotate(Vector3.left * mouseY);
     }
-    void OnInteract(InputAction.CallbackContext context)
+
+    private void OnInteract(InputAction.CallbackContext context)
     {
-        if (heldObject == null) TryPickup(); else DropObject();
+        TryPickup();
     }
-    void TryPickup()
+
+    private void TryPickup()
     {
-        Ray ray = new Ray(cameraTransform.position, cameraTransform.forward);
-        if (Physics.Raycast(ray, out RaycastHit hit, pickupRange))
-            if (hit.collider.CompareTag("Pickup")) PickupObject(hit.collider.gameObject);
-    }
-    void PickupObject(GameObject o)
-    {
-        heldObject = o;
-        heldObject.transform.SetParent(holdPoint);
-        heldObject.transform.localPosition = Vector3.zero;
-        heldObject.transform.localRotation = Quaternion.identity;
-        var rb = heldObject.GetComponent<Rigidbody>(); if (rb) rb.isKinematic = true;
-    }
-    void DropObject()
-    {
-        heldObject.transform.SetParent(null);
-        var rb = heldObject.GetComponent<Rigidbody>(); if (rb) rb.isKinematic = false;
-        heldObject = null;
+        Ray ray = new Ray(
+            cameraTransform.position,
+            cameraTransform.forward
+        );
+
+        RaycastHit hit;
+
+        if (Physics.Raycast(ray, out hit, pickupRange))
+        {
+            if (hit.collider.CompareTag("Pickup"))
+            {
+                GameObject item = hit.collider.gameObject;
+
+                item.transform.SetParent(holdPoint);
+
+                item.transform.localPosition = Vector3.zero;
+                item.transform.localRotation = Quaternion.identity;
+
+                Rigidbody rb = item.GetComponent<Rigidbody>();
+
+                if (rb != null)
+                {
+                    rb.isKinematic = true;
+                }
+
+                Debug.Log("Picked up: " + item.name);
+            }
+        }
     }
 }
