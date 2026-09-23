@@ -91,6 +91,7 @@ public class PlayerController : MonoBehaviour
 
     private void OnInteract(InputAction.CallbackContext context)
     {
+        Debug.Log("INTERACT BUTTON PRESSED");
         TryPickup();
     }
 
