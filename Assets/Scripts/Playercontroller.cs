@@ -1,4 +1,3 @@
-
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -20,6 +19,8 @@ public class PlayerController : MonoBehaviour
 
     private Vector2 moveInput;
     private Vector2 lookInput;
+
+    private GameObject heldObject;
 
     private void Awake()
     {
@@ -92,7 +93,15 @@ public class PlayerController : MonoBehaviour
     private void OnInteract(InputAction.CallbackContext context)
     {
         Debug.Log("INTERACT BUTTON PRESSED");
-        TryPickup();
+
+        if (heldObject == null)
+        {
+            TryPickup();
+        }
+        else
+        {
+            DropObject();
+        }
     }
 
     private void TryPickup()
@@ -110,6 +119,8 @@ public class PlayerController : MonoBehaviour
             {
                 GameObject item = hit.collider.gameObject;
 
+                heldObject = item;
+
                 item.transform.SetParent(holdPoint);
 
                 item.transform.localPosition = Vector3.zero;
@@ -125,5 +136,21 @@ public class PlayerController : MonoBehaviour
                 Debug.Log("Picked up: " + item.name);
             }
         }
+    }
+
+    private void DropObject()
+    {
+        heldObject.transform.SetParent(null);
+
+        Rigidbody rb = heldObject.GetComponent<Rigidbody>();
+
+        if (rb != null)
+        {
+            rb.isKinematic = false;
+        }
+
+        Debug.Log("Dropped: " + heldObject.name);
+
+        heldObject = null;
     }
 }
