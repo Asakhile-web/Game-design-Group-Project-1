@@ -15137,7 +15137,7 @@ GameObject:
   - component: {fileID: 223965745}
   m_Layer: 0
   m_Name: Painting
-  m_TagString: Pickup
+  m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -202309,7 +202309,7 @@ GameObject:
   - component: {fileID: 1862907854}
   m_Layer: 0
   m_Name: Lamp
-  m_TagString: Pickup
+  m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
