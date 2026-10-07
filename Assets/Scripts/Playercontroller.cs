@@ -1,4 +1,3 @@
-
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -21,10 +20,11 @@ public class PlayerController : MonoBehaviour
     private Vector2 moveInput;
     private Vector2 lookInput;
 
+    private GameObject heldObject;
+
     private void Awake()
     {
         controller = GetComponent<CharacterController>();
-
         inputActions = new PlayerInputActions();
     }
 
@@ -85,45 +85,74 @@ public class PlayerController : MonoBehaviour
         float mouseY = lookInput.y * mouseSensitivity * Time.deltaTime;
 
         transform.Rotate(Vector3.up * mouseX);
-
         cameraTransform.Rotate(Vector3.left * mouseY);
     }
 
     private void OnInteract(InputAction.CallbackContext context)
     {
-        Debug.Log("INTERACT BUTTON PRESSED");
-        TryPickup();
+        Debug.Log("E PRESSED");
+
+        if (heldObject == null)
+        {
+            TryPickup();
+        }
+        else
+        {
+            DropObject();
+        }
     }
 
     private void TryPickup()
     {
-        Ray ray = new Ray(
+        if (Physics.Raycast(
             cameraTransform.position,
-            cameraTransform.forward
-        );
-
-        RaycastHit hit;
-
-        if (Physics.Raycast(ray, out hit, pickupRange))
+            cameraTransform.forward,
+            out RaycastHit hit,
+            pickupRange))
         {
+            Debug.Log("I hit: " + hit.collider.name);
+
             if (hit.collider.CompareTag("Pickup"))
             {
-                GameObject item = hit.collider.gameObject;
+                heldObject = hit.collider.gameObject;
 
-                item.transform.SetParent(holdPoint);
+                heldObject.transform.SetParent(holdPoint);
+                heldObject.transform.localPosition = Vector3.zero;
+                heldObject.transform.localRotation = Quaternion.identity;
 
-                item.transform.localPosition = Vector3.zero;
-                item.transform.localRotation = Quaternion.identity;
-
-                Rigidbody rb = item.GetComponent<Rigidbody>();
+                Rigidbody rb = heldObject.GetComponent<Rigidbody>();
 
                 if (rb != null)
                 {
                     rb.isKinematic = true;
                 }
 
-                Debug.Log("Picked up: " + item.name);
+                Debug.Log("PICKED UP: " + heldObject.name);
+            }
+            else
+            {
+                Debug.Log("This object is not tagged Pickup");
             }
         }
+        else
+        {
+            Debug.Log("Hit NOTHING - get closer, look straight at it");
+        }
+    }
+
+    private void DropObject()
+    {
+        heldObject.transform.SetParent(null);
+
+        Rigidbody rb = heldObject.GetComponent<Rigidbody>();
+
+        if (rb != null)
+        {
+            rb.isKinematic = false;
+        }
+
+        Debug.Log("DROPPED: " + heldObject.name);
+
+        heldObject = null;
     }
 }
