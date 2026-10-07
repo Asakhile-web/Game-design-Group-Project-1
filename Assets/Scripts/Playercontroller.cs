@@ -25,7 +25,6 @@ public class PlayerController : MonoBehaviour
     private void Awake()
     {
         controller = GetComponent<CharacterController>();
-
         inputActions = new PlayerInputActions();
     }
 
@@ -86,13 +85,12 @@ public class PlayerController : MonoBehaviour
         float mouseY = lookInput.y * mouseSensitivity * Time.deltaTime;
 
         transform.Rotate(Vector3.up * mouseX);
-
         cameraTransform.Rotate(Vector3.left * mouseY);
     }
 
     private void OnInteract(InputAction.CallbackContext context)
     {
-        Debug.Log("INTERACT BUTTON PRESSED");
+        Debug.Log("E PRESSED");
 
         if (heldObject == null)
         {
@@ -105,38 +103,67 @@ public class PlayerController : MonoBehaviour
     }
 
     private void TryPickup()
+{
+    if (Physics.Raycast(
+        cameraTransform.position,
+        cameraTransform.forward,
+        out RaycastHit hit,
+        pickupRange))
     {
-        Ray ray = new Ray(
-            cameraTransform.position,
-            cameraTransform.forward
-        );
+        Debug.Log("I hit: " + hit.collider.name);
 
-        RaycastHit hit;
+        // Start with the object that was hit
+        Transform pickupRoot = hit.collider.transform;
 
-        if (Physics.Raycast(ray, out hit, pickupRange))
+        // Keep going up through the parents until we find
+        // the object tagged "Pickup"
+        while (pickupRoot != null)
         {
-            if (hit.collider.CompareTag("Pickup"))
+            if (pickupRoot.CompareTag("Pickup"))
             {
-                GameObject item = hit.collider.gameObject;
-
-                heldObject = item;
-
-                item.transform.SetParent(holdPoint);
-
-                item.transform.localPosition = Vector3.zero;
-                item.transform.localRotation = Quaternion.identity;
-
-                Rigidbody rb = item.GetComponent<Rigidbody>();
-
-                if (rb != null)
-                {
-                    rb.isKinematic = true;
-                }
-
-                Debug.Log("Picked up: " + item.name);
+                break;
             }
+
+            pickupRoot = pickupRoot.parent;
+        }
+
+        // If we found the Pickup tag
+        if (pickupRoot != null)
+        {
+            heldObject = pickupRoot.gameObject;
+
+            // Move the whole lamp to the HoldPoint
+            heldObject.transform.SetParent(holdPoint);
+
+            heldObject.transform.localPosition = Vector3.zero;
+            heldObject.transform.localRotation = Quaternion.identity;
+
+            // Find the Rigidbody on the lamp or its children
+            Rigidbody rb = heldObject.GetComponent<Rigidbody>();
+
+            if (rb == null)
+            {
+                rb = heldObject.GetComponentInChildren<Rigidbody>();
+            }
+
+            // Turn physics off while holding
+            if (rb != null)
+            {
+                rb.isKinematic = true;
+            }
+
+            Debug.Log("PICKED UP: " + heldObject.name);
+        }
+        else
+        {
+            Debug.Log("This object and its parents are not tagged Pickup.");
         }
     }
+    else
+    {
+        Debug.Log("Hit NOTHING - get closer and look directly at the object.");
+    }
+}
 
     private void DropObject()
     {
@@ -149,7 +176,7 @@ public class PlayerController : MonoBehaviour
             rb.isKinematic = false;
         }
 
-        Debug.Log("Dropped: " + heldObject.name);
+        Debug.Log("DROPPED: " + heldObject.name);
 
         heldObject = null;
     }
