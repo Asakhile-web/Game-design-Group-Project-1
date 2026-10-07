@@ -103,42 +103,67 @@ public class PlayerController : MonoBehaviour
     }
 
     private void TryPickup()
+{
+    if (Physics.Raycast(
+        cameraTransform.position,
+        cameraTransform.forward,
+        out RaycastHit hit,
+        pickupRange))
     {
-        if (Physics.Raycast(
-            cameraTransform.position,
-            cameraTransform.forward,
-            out RaycastHit hit,
-            pickupRange))
+        Debug.Log("I hit: " + hit.collider.name);
+
+        // Start with the object that was hit
+        Transform pickupRoot = hit.collider.transform;
+
+        // Keep going up through the parents until we find
+        // the object tagged "Pickup"
+        while (pickupRoot != null)
         {
-            Debug.Log("I hit: " + hit.collider.name);
-
-            if (hit.collider.CompareTag("Pickup"))
+            if (pickupRoot.CompareTag("Pickup"))
             {
-                heldObject = hit.collider.gameObject;
-
-                heldObject.transform.SetParent(holdPoint);
-                heldObject.transform.localPosition = Vector3.zero;
-                heldObject.transform.localRotation = Quaternion.identity;
-
-                Rigidbody rb = heldObject.GetComponent<Rigidbody>();
-
-                if (rb != null)
-                {
-                    rb.isKinematic = true;
-                }
-
-                Debug.Log("PICKED UP: " + heldObject.name);
+                break;
             }
-            else
+
+            pickupRoot = pickupRoot.parent;
+        }
+
+        // If we found the Pickup tag
+        if (pickupRoot != null)
+        {
+            heldObject = pickupRoot.gameObject;
+
+            // Move the whole lamp to the HoldPoint
+            heldObject.transform.SetParent(holdPoint);
+
+            heldObject.transform.localPosition = Vector3.zero;
+            heldObject.transform.localRotation = Quaternion.identity;
+
+            // Find the Rigidbody on the lamp or its children
+            Rigidbody rb = heldObject.GetComponent<Rigidbody>();
+
+            if (rb == null)
             {
-                Debug.Log("This object is not tagged Pickup");
+                rb = heldObject.GetComponentInChildren<Rigidbody>();
             }
+
+            // Turn physics off while holding
+            if (rb != null)
+            {
+                rb.isKinematic = true;
+            }
+
+            Debug.Log("PICKED UP: " + heldObject.name);
         }
         else
         {
-            Debug.Log("Hit NOTHING - get closer, look straight at it");
+            Debug.Log("This object and its parents are not tagged Pickup.");
         }
     }
+    else
+    {
+        Debug.Log("Hit NOTHING - get closer and look directly at the object.");
+    }
+}
 
     private void DropObject()
     {
