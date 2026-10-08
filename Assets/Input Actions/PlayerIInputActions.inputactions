@@ -25,9 +25,18 @@
                     "initialStateCheck": true
                 },
                 {
-                    "name": "Pickup/Drop",
+                    "name": "Interact",
                     "type": "Button",
                     "id": "d8938191-b7ec-4de3-993f-5dcff7b82613",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "use",
+                    "type": "Button",
+                    "id": "cb78fba3-1be2-4028-9938-1c6ec9c3a087",
                     "expectedControlType": "",
                     "processors": "",
                     "interactions": "",
@@ -108,7 +117,29 @@
                     "interactions": "",
                     "processors": "",
                     "groups": "",
-                    "action": "Pickup/Drop",
+                    "action": "Interact",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "b6ae45ef-8d9d-4c3d-96db-bdeb99d9f96b",
+                    "path": "",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Interact",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "b22e8179-31c4-434a-9e33-52d9278047fe",
+                    "path": "<Keyboard>/f",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "use",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }
