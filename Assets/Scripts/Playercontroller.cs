@@ -42,17 +42,21 @@ public class PlayerController : MonoBehaviour
     }
 
     private void OnDisable()
-    {
-        inputActions.Player.Move.performed -= OnMove;
-        inputActions.Player.Move.canceled -= OnMove;
+{
+    if (inputActions == null)
+        return;
 
-        inputActions.Player.Look.performed -= OnLook;
-        inputActions.Player.Look.canceled -= OnLook;
+    inputActions.Player.Move.performed -= OnMove;
+    inputActions.Player.Move.canceled -= OnMove;
 
-        inputActions.Player.Interact.performed -= OnInteract;
+    inputActions.Player.Look.performed -= OnLook;
+    inputActions.Player.Look.canceled -= OnLook;
 
-        inputActions.Disable();
-    }
+    inputActions.Player.Interact.performed -= OnInteract;
+
+    inputActions.Disable();
+}
+    
 
     private void OnMove(InputAction.CallbackContext context)
     {
@@ -89,18 +93,18 @@ public class PlayerController : MonoBehaviour
     }
 
     private void OnInteract(InputAction.CallbackContext context)
-    {
-        Debug.Log("E PRESSED");
+{
+    Debug.Log("E PRESSED");
 
-        if (heldObject == null)
-        {
-            TryPickup();
-        }
-        else
-        {
-            DropObject();
-        }
+    if (heldObject == null)
+    {
+        TryPickup();
     }
+    else
+    {
+        DropObject();
+    }
+}
 
     private void TryPickup()
 {
