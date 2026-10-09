@@ -94,7 +94,7 @@
             {
                 "type": "UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
                 "key": "ShapeBuilder.LastSize.Cylinder",
-                "value": "{\"m_Value\":{\"x\":0.005884647369384766,\"y\":-0.6546773910522461,\"z\":0.04119253158569336}}"
+                "value": "{\"m_Value\":{\"x\":-0.023267745971679689,\"y\":0.25710394978523257,\"z\":-0.02637004852294922}}"
             },
             {
                 "type": "UnityEngine.Vector3, UnityEngine.CoreModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null",
