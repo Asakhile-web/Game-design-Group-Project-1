@@ -4,6 +4,12 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/Scenes/MainMenu.unity
+    guid: 27cba838488aab9409c6a73fbe6e5bc7
+  - enabled: 1
+    path: Assets/Scenes/Writers Study Greybox.unity
+    guid: 7a3773abdb3e5394f8673d9d46f3ddf1
   m_configObjects: {}
   m_UseUCBPForAssetBundles: 0
