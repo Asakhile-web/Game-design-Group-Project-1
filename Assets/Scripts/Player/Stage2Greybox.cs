@@ -12,8 +12,10 @@ public static class Stage2Greybox
             return;
         }
 
-        ItemDefinition brass = ItemDefinition.CreateRuntime("brass_key", "Brass Key", consume: true);
-        ItemDefinition iron = ItemDefinition.CreateRuntime("iron_key", "Iron Key", consume: true);
+        ItemDefinition brass = ItemDefinition.CreateRuntime("brass_key", "Brass Key", consume: true,
+            "A small tarnished key with a worn bow. It looks like it fits a desk lock.");
+        ItemDefinition iron = ItemDefinition.CreateRuntime("iron_key", "Iron Key", consume: true,
+            "A heavy iron key, cold to the touch. Too large for a drawer.");
 
         CreateKeyPickup(root, "BrassKey", new Vector3(0.35f, 0.08f, 1.8f), new Color(0.82f, 0.65f, 0.22f), brass);
         CreateKeyPickup(root, "IronKey", new Vector3(0.7f, 0.08f, 1.8f), new Color(0.55f, 0.58f, 0.62f), iron);
@@ -21,6 +23,13 @@ public static class Stage2Greybox
         CreateDeskAndDrawer(root, brass);
         CreateHingedDoor(root, new Vector3(-4f, 0f, 2f), locked: false, required: null, "StudyDoor");
         CreateLocker(root, new Vector3(3.2f, 0f, 1.4f), iron);
+        CreateClueNote(root);
+
+        ObjectiveTracker tracker = Object.FindFirstObjectByType<ObjectiveTracker>();
+        if (tracker != null && !tracker.HasObjective)
+        {
+            tracker.SetObjective("Search the study for clues");
+        }
 
         Debug.Log("[Stage2Greybox] Spawned keys, locked drawer, door, and locker.");
     }
@@ -123,5 +132,22 @@ public static class Stage2Greybox
         {
             renderer.material.SetColor("_BaseColor", color);
         }
+    }
+
+    static void CreateClueNote(Transform root)
+    {
+        GameObject note = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        note.name = "TornNote";
+        note.transform.SetParent(root);
+        note.transform.position = new Vector3(2.2f, 0.81f, 2.1f);
+        note.transform.localScale = new Vector3(0.3f, 0.02f, 0.22f);
+        ApplyColor(note, new Color(0.88f, 0.82f, 0.66f));
+
+        ClueInteractable clue = note.AddComponent<ClueInteractable>();
+        clue.Clue = ClueDefinition.CreateRuntime("torn_note", "Torn Note",
+            "\"...kept the brass key on the floor by the desk, where no one would think to look. " +
+            "The iron one opens the locker.\"\n\nThe handwriting matches the letters on the desk.");
+        clue.DisplayName = "the torn note";
+        clue.ObjectiveOnDiscover = "Find the brass key and unlock the desk drawer";
     }
 }
