@@ -34,7 +34,7 @@ public class ItemDefinition : ScriptableObject
         return !string.IsNullOrEmpty(id) && id == other.id;
     }
 
-    public static ItemDefinition CreateRuntime(string itemId, string itemDisplayName, bool consume = true)
+    public static ItemDefinition CreateRuntime(string itemId, string itemDisplayName, bool consume = true, string itemDescription = null)
     {
         ItemDefinition def = CreateInstance<ItemDefinition>();
         def.hideFlags = HideFlags.HideAndDontSave;
@@ -42,6 +42,7 @@ public class ItemDefinition : ScriptableObject
         def.id = itemId;
         def.displayName = itemDisplayName;
         def.consumeOnUse = consume;
+        def.description = itemDescription;
         return def;
     }
 }

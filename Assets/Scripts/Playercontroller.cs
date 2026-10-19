@@ -65,6 +65,13 @@ public class PlayerController : MonoBehaviour
     public Transform HoldPoint => holdPoint;
     public InventorySystem Inventory => inventory;
 
+    /// <summary>Effective look sensitivity (legacy Inspector values >= 1 are converted).</summary>
+    public float MouseSensitivity
+    {
+        get => mouseSensitivity >= 1f ? mouseSensitivity * 0.06f : mouseSensitivity;
+        set => mouseSensitivity = Mathf.Clamp(value, 0.01f, 0.99f);
+    }
+
     void Awake()
     {
         controller = GetComponent<CharacterController>();
@@ -78,6 +85,7 @@ public class PlayerController : MonoBehaviour
         EnsureInteraction();
         EnsureInventory();
         EnsureHeadBobAndFootsteps();
+        EnsureGameUi();
 
         if (spawnFallbackGreybox)
         {
@@ -445,5 +453,40 @@ public class PlayerController : MonoBehaviour
         {
             gameObject.AddComponent<FootstepEmitter>();
         }
+    }
+
+    void EnsureGameUi()
+    {
+        if (GetComponent<ClueJournal>() == null)
+        {
+            gameObject.AddComponent<ClueJournal>();
+        }
+
+        if (GetComponent<ObjectiveTracker>() == null)
+        {
+            gameObject.AddComponent<ObjectiveTracker>();
+        }
+
+        InteractionHUD hud = FindFirstObjectByType<InteractionHUD>();
+        if (hud == null)
+        {
+            return;
+        }
+
+        GameMenu menu = FindFirstObjectByType<GameMenu>();
+        if (menu == null)
+        {
+            menu = new GameObject("GameMenu").AddComponent<GameMenu>();
+        }
+
+        menu.Bind(this);
+
+        GameHUD gameHud = hud.GetComponent<GameHUD>();
+        if (gameHud == null)
+        {
+            gameHud = hud.gameObject.AddComponent<GameHUD>();
+        }
+
+        gameHud.Bind(this, menu);
     }
 }
