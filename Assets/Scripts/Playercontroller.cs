@@ -1,3 +1,4 @@
+
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -14,6 +15,9 @@ public class PlayerController : MonoBehaviour
     public Transform holdPoint;
     public float pickupRange = 3f;
 
+    [Header("Pickup Audio")]
+    public AudioSource pickupAudio;
+
     private CharacterController controller;
     private PlayerInputActions inputActions;
 
@@ -26,12 +30,15 @@ public class PlayerController : MonoBehaviour
     {
         controller = GetComponent<CharacterController>();
         inputActions = new PlayerInputActions();
+
+        if (pickupAudio == null)
+        {
+            pickupAudio = GetComponent<AudioSource>();
+        }
     }
 
     private void OnEnable()
     {
-        inputActions.Enable();
-
         inputActions.Player.Move.performed += OnMove;
         inputActions.Player.Move.canceled += OnMove;
 
@@ -39,10 +46,13 @@ public class PlayerController : MonoBehaviour
         inputActions.Player.Look.canceled += OnLook;
 
         inputActions.Player.Interact.performed += OnInteract;
+
+        inputActions.Enable();
     }
 
     private void OnDisable()
     {
+<<<<<<< Updated upstream
         inputActions.Player.Move.performed -= OnMove;
         inputActions.Player.Move.canceled -= OnMove;
 
@@ -51,6 +61,19 @@ public class PlayerController : MonoBehaviour
 
         inputActions.Player.Interact.performed -= OnInteract;
 
+=======
+        if (inputActions == null)
+            return;
+
+        inputActions.Player.Move.performed -= OnMove;
+        inputActions.Player.Move.canceled -= OnMove;
+
+        inputActions.Player.Look.performed -= OnLook;
+        inputActions.Player.Look.canceled -= OnLook;
+
+        inputActions.Player.Interact.performed -= OnInteract;
+
+>>>>>>> Stashed changes
         inputActions.Disable();
     }
 
@@ -90,6 +113,7 @@ public class PlayerController : MonoBehaviour
 
     private void OnInteract(InputAction.CallbackContext context)
     {
+<<<<<<< Updated upstream
         Debug.Log("E PRESSED");
 
         if (heldObject == null)
@@ -118,52 +142,68 @@ public class PlayerController : MonoBehaviour
         // Keep going up through the parents until we find
         // the object tagged "Pickup"
         while (pickupRoot != null)
+=======
+        if (heldObject == null)
+>>>>>>> Stashed changes
         {
-            if (pickupRoot.CompareTag("Pickup"))
-            {
-                break;
-            }
-
-            pickupRoot = pickupRoot.parent;
-        }
-
-        // If we found the Pickup tag
-        if (pickupRoot != null)
-        {
-            heldObject = pickupRoot.gameObject;
-
-            // Move the whole lamp to the HoldPoint
-            heldObject.transform.SetParent(holdPoint);
-
-            heldObject.transform.localPosition = Vector3.zero;
-            heldObject.transform.localRotation = Quaternion.identity;
-
-            // Find the Rigidbody on the lamp or its children
-            Rigidbody rb = heldObject.GetComponent<Rigidbody>();
-
-            if (rb == null)
-            {
-                rb = heldObject.GetComponentInChildren<Rigidbody>();
-            }
-
-            // Turn physics off while holding
-            if (rb != null)
-            {
-                rb.isKinematic = true;
-            }
-
-            Debug.Log("PICKED UP: " + heldObject.name);
+            TryPickup();
         }
         else
         {
-            Debug.Log("This object and its parents are not tagged Pickup.");
+            DropObject();
         }
     }
-    else
+
+    private void TryPickup()
     {
-        Debug.Log("Hit NOTHING - get closer and look directly at the object.");
+        if (Physics.Raycast(
+            cameraTransform.position,
+            cameraTransform.forward,
+            out RaycastHit hit,
+            pickupRange))
+        {
+            Transform pickupRoot = hit.collider.transform;
+
+            while (pickupRoot != null)
+            {
+                if (pickupRoot.CompareTag("Pickup"))
+                    break;
+
+                pickupRoot = pickupRoot.parent;
+            }
+
+            if (pickupRoot != null)
+            {
+                heldObject = pickupRoot.gameObject;
+
+                heldObject.transform.SetParent(holdPoint);
+                heldObject.transform.localPosition = Vector3.zero;
+                heldObject.transform.localRotation = Quaternion.identity;
+
+                Rigidbody rb = heldObject.GetComponent<Rigidbody>();
+
+                if (rb == null)
+                    rb = heldObject.GetComponentInChildren<Rigidbody>();
+
+                if (rb != null)
+                    rb.isKinematic = true;
+
+                // Play sound only when an item is picked up.
+                if (pickupAudio != null)
+                    pickupAudio.Play();
+
+                Debug.Log("PICKED UP: " + heldObject.name);
+            }
+            else
+            {
+                Debug.Log("This object and its parents are not tagged Pickup.");
+            }
+        }
+        else
+        {
+            Debug.Log("Hit NOTHING - get closer and look directly at the object.");
+        }
     }
-}
 
     private void DropObject()
     {
@@ -171,10 +211,11 @@ public class PlayerController : MonoBehaviour
 
         Rigidbody rb = heldObject.GetComponent<Rigidbody>();
 
+        if (rb == null)
+            rb = heldObject.GetComponentInChildren<Rigidbody>();
+
         if (rb != null)
-        {
             rb.isKinematic = false;
-        }
 
         Debug.Log("DROPPED: " + heldObject.name);
 
