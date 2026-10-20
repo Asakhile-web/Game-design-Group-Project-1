@@ -1,494 +1,240 @@
+
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.Serialization;
 
-/// <summary>
-/// First-person move/look. Extends the original prototype: gravity, sprint, crouch, pitch clamp,
-/// cursor lock, InteractionRaycaster, and a five-slot InventorySystem (F / click to use on a target).
-/// </summary>
-[RequireComponent(typeof(CharacterController))]
 public class PlayerController : MonoBehaviour
 {
     [Header("Movement")]
-    [SerializeField] float moveSpeed = 5f;
-    [SerializeField] float sprintSpeed = 8f;
-    [SerializeField] float gravity = -18f;
-    [SerializeField] float crouchSpeedMultiplier = 0.5f;
-    [SerializeField] float crouchHeight = 1.2f;
-    [SerializeField] float crouchCameraHeight = 0.9f;
-    [SerializeField] float standCameraHeight = 1.6f;
-    [SerializeField] float crouchLerpSpeed = 10f;
+    public float moveSpeed = 5f;
 
     [Header("Look")]
-    [SerializeField] float mouseSensitivity = 0.12f;
-    [SerializeField] float minPitch = -80f;
-    [SerializeField] float maxPitch = 80f;
-    [FormerlySerializedAs("playerCamera")]
-    [SerializeField] Transform cameraTransform;
+    public float mouseSensitivity = 2f;
+    public Transform cameraTransform;
 
-    [Header("Interaction")]
-    [SerializeField] Transform holdPoint;
-    [SerializeField] float pickupRange = 3f;
-    [SerializeField] InteractionRaycaster interactionRaycaster;
-    [SerializeField] InventorySystem inventory;
+    [Header("Pickup")]
+    public Transform holdPoint;
+    public float pickupRange = 3f;
 
-    [Header("Stage 1 convenience")]
-    [Tooltip("If the scene is empty, spawn a floor, light, and a test interactable so gravity/E can be tested.")]
-    [SerializeField] bool spawnFallbackGreybox = true;
-    [SerializeField] bool lockCursorOnStart = true;
+    [Header("Pickup Audio")]
+    public AudioSource pickupAudio;
+    public AudioClip dropSound;
 
-    CharacterController controller;
-    PlayerInputActions inputActions;
-    HeadBob headBob;
+    [Header("Footstep Audio")]
+    public AudioSource footstepAudio;
+    public float footstepInterval = 0.5f;
+    [Range(0f, 1f)]
+    public float footstepVolume = 0.5f;
 
-    Vector2 moveInput;
-    Vector2 lookInput;
-    bool sprintHeld;
-    bool crouchHeld;
-    float pitch;
-    float verticalVelocity;
-    float standingHeight;
-    Vector3 standingCenter;
-    float cameraHeightCurrent;
-    bool controlEnabled = true;
+    private float footstepTimer;
 
-    public bool ControlEnabled
-    {
-        get => controlEnabled;
-        set => controlEnabled = value;
-    }
+    private CharacterController controller;
+    private PlayerInputActions inputActions;
 
-    public bool IsGrounded => controller != null && controller.isGrounded;
-    public bool IsSprinting => sprintHeld && !crouchHeld && IsMoving;
-    public bool IsMoving => moveInput.sqrMagnitude > 0.01f;
-    public Transform CameraTransform => cameraTransform;
-    public Transform HoldPoint => holdPoint;
-    public InventorySystem Inventory => inventory;
+    private Vector2 moveInput;
+    private Vector2 lookInput;
 
-    /// <summary>Effective look sensitivity (legacy Inspector values >= 1 are converted).</summary>
-    public float MouseSensitivity
-    {
-        get => mouseSensitivity >= 1f ? mouseSensitivity * 0.06f : mouseSensitivity;
-        set => mouseSensitivity = Mathf.Clamp(value, 0.01f, 0.99f);
-    }
+    private GameObject heldObject;
 
-    void Awake()
+    private void Awake()
     {
         controller = GetComponent<CharacterController>();
-        standingHeight = controller.height;
-        standingCenter = controller.center;
-        cameraHeightCurrent = standCameraHeight;
         inputActions = new PlayerInputActions();
 
-        ResolveCamera();
-        EnsureHoldPoint();
-        EnsureInteraction();
-        EnsureInventory();
-        EnsureHeadBobAndFootsteps();
-        EnsureGameUi();
-
-        SystemsBootstrap.Ensure(this);
-
-        if (spawnFallbackGreybox)
+        if (pickupAudio == null)
         {
-            Stage1Greybox.Ensure(this);
+            pickupAudio = GetComponent<AudioSource>();
+        }
+
+        if (footstepAudio != null)
+        {
+            footstepAudio.playOnAwake = false;
+            footstepAudio.loop = false;
         }
     }
 
-    void OnEnable()
+    private void OnEnable()
     {
-        if (inputActions == null)
-        {
-            return;
-        }
-
-        inputActions.Enable();
         inputActions.Player.Move.performed += OnMove;
         inputActions.Player.Move.canceled += OnMove;
+
         inputActions.Player.Look.performed += OnLook;
         inputActions.Player.Look.canceled += OnLook;
+
         inputActions.Player.Interact.performed += OnInteract;
-        inputActions.Player.Sprint.performed += OnSprint;
-        inputActions.Player.Sprint.canceled += OnSprint;
-        inputActions.Player.Crouch.performed += OnCrouch;
-        inputActions.Player.Crouch.canceled += OnCrouch;
-        inputActions.Player.UseItem.performed += OnUseItem;
-        inputActions.Player.Hotbar1.performed += OnHotbar;
-        inputActions.Player.Hotbar2.performed += OnHotbar;
-        inputActions.Player.Hotbar3.performed += OnHotbar;
-        inputActions.Player.Hotbar4.performed += OnHotbar;
-        inputActions.Player.Hotbar5.performed += OnHotbar;
+
+        inputActions.Enable();
     }
 
-    void OnDisable()
+    private void OnDisable()
     {
-        if (inputActions != null)
-        {
-            inputActions.Player.Move.performed -= OnMove;
-            inputActions.Player.Move.canceled -= OnMove;
-            inputActions.Player.Look.performed -= OnLook;
-            inputActions.Player.Look.canceled -= OnLook;
-            inputActions.Player.Interact.performed -= OnInteract;
-            inputActions.Player.Sprint.performed -= OnSprint;
-            inputActions.Player.Sprint.canceled -= OnSprint;
-            inputActions.Player.Crouch.performed -= OnCrouch;
-            inputActions.Player.Crouch.canceled -= OnCrouch;
-            inputActions.Player.UseItem.performed -= OnUseItem;
-            inputActions.Player.Hotbar1.performed -= OnHotbar;
-            inputActions.Player.Hotbar2.performed -= OnHotbar;
-            inputActions.Player.Hotbar3.performed -= OnHotbar;
-            inputActions.Player.Hotbar4.performed -= OnHotbar;
-            inputActions.Player.Hotbar5.performed -= OnHotbar;
-            inputActions.Disable();
-        }
+        if (inputActions == null)
+            return;
 
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
+        inputActions.Player.Move.performed -= OnMove;
+        inputActions.Player.Move.canceled -= OnMove;
+
+        inputActions.Player.Look.performed -= OnLook;
+        inputActions.Player.Look.canceled -= OnLook;
+
+        inputActions.Player.Interact.performed -= OnInteract;
+
+        inputActions.Disable();
     }
 
-    void OnDestroy()
-    {
-        inputActions?.Dispose();
-    }
-
-    void Start()
-    {
-        if (lockCursorOnStart)
-        {
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
-        }
-    }
-
-    void Update()
-    {
-        if (!controlEnabled)
-        {
-            moveInput = Vector2.zero;
-            lookInput = Vector2.zero;
-        }
-
-        Look();
-        Move();
-        UpdateCrouch();
-        TickInteraction();
-    }
-
-    void OnMove(InputAction.CallbackContext context)
+    private void OnMove(InputAction.CallbackContext context)
     {
         moveInput = context.ReadValue<Vector2>();
     }
 
-    void OnLook(InputAction.CallbackContext context)
+    private void OnLook(InputAction.CallbackContext context)
     {
         lookInput = context.ReadValue<Vector2>();
     }
 
-    void OnSprint(InputAction.CallbackContext context)
+    private void Update()
     {
-        sprintHeld = context.ReadValueAsButton();
+        Move();
+        Look();
+        HandleFootsteps();
     }
 
-    void OnCrouch(InputAction.CallbackContext context)
+    private void Move()
     {
-        crouchHeld = context.ReadValueAsButton();
+        Vector3 movement =
+            transform.right * moveInput.x +
+            transform.forward * moveInput.y;
+
+        controller.Move(movement * moveSpeed * Time.deltaTime);
     }
 
-    void OnInteract(InputAction.CallbackContext context)
+    private void Look()
     {
-        if (!context.performed || !controlEnabled)
-        {
+        if (cameraTransform == null)
             return;
-        }
 
-        InteractionContext interaction = BuildContext();
-        if (interactionRaycaster != null)
+        float mouseX = lookInput.x * mouseSensitivity * Time.deltaTime;
+        float mouseY = lookInput.y * mouseSensitivity * Time.deltaTime;
+
+        transform.Rotate(Vector3.up * mouseX);
+        cameraTransform.Rotate(Vector3.left * mouseY);
+    }
+
+    private void HandleFootsteps()
+    {
+        if (footstepAudio == null || footstepAudio.clip == null)
+            return;
+
+        bool isMoving = moveInput.sqrMagnitude > 0.01f;
+        bool isGrounded = controller.isGrounded;
+
+        if (isMoving && isGrounded)
         {
-            if (!interactionRaycaster.TryInteract(interaction))
+            footstepTimer -= Time.deltaTime;
+
+            if (footstepTimer <= 0f)
             {
-                Debug.Log("[PlayerController] Interact pressed, nothing in range.", this);
+                footstepAudio.PlayOneShot(
+                    footstepAudio.clip,
+                    footstepVolume
+                );
+
+                footstepTimer = footstepInterval;
             }
         }
         else
         {
-            Debug.LogWarning("[PlayerController] InteractionRaycaster is missing.", this);
+            footstepTimer = 0f;
         }
     }
 
-    void OnUseItem(InputAction.CallbackContext context)
+    private void OnInteract(InputAction.CallbackContext context)
     {
-        if (!context.performed || !controlEnabled)
-        {
-            return;
-        }
+        Debug.Log("E PRESSED");
 
-        if (interactionRaycaster == null)
+        if (heldObject == null)
         {
-            Debug.LogWarning("[PlayerController] InteractionRaycaster is missing.", this);
-            return;
-        }
-
-        interactionRaycaster.TryUseSelectedItem(BuildContext());
-    }
-
-    void OnHotbar(InputAction.CallbackContext context)
-    {
-        if (!context.performed || !controlEnabled || inventory == null)
-        {
-            return;
-        }
-
-        string actionName = context.action.name;
-        if (actionName.Length > 6 && int.TryParse(actionName.Substring(6), out int slot))
-        {
-            inventory.SelectSlot(slot - 1);
-        }
-    }
-
-    void Move()
-    {
-        if (controller == null)
-        {
-            return;
-        }
-
-        float speed = moveSpeed;
-        if (sprintHeld && !crouchHeld)
-        {
-            speed = sprintSpeed;
-        }
-        else if (crouchHeld)
-        {
-            speed *= crouchSpeedMultiplier;
-        }
-
-        Vector3 planar = (transform.right * moveInput.x + transform.forward * moveInput.y);
-        if (planar.sqrMagnitude > 1f)
-        {
-            planar.Normalize();
-        }
-
-        if (controller.isGrounded && verticalVelocity < 0f)
-        {
-            verticalVelocity = -2f;
+            TryPickup();
         }
         else
         {
-            verticalVelocity += gravity * Time.deltaTime;
-        }
-
-        Vector3 velocity = planar * speed;
-        velocity.y = verticalVelocity;
-        controller.Move(velocity * Time.deltaTime);
-    }
-
-    void Look()
-    {
-        if (cameraTransform == null || !controlEnabled)
-        {
-            return;
-        }
-
-        // Mouse delta is already per-frame; do not multiply by Time.deltaTime or look becomes FPS-dependent.
-        // Values >= 1 are treated as the old Time.deltaTime-scaled Inspector range (scene still has 2).
-        float lookScale = mouseSensitivity >= 1f ? mouseSensitivity * 0.06f : mouseSensitivity;
-        float yaw = lookInput.x * lookScale;
-        pitch -= lookInput.y * lookScale;
-        pitch = Mathf.Clamp(pitch, minPitch, maxPitch);
-
-        transform.Rotate(Vector3.up * yaw);
-        cameraTransform.localEulerAngles = new Vector3(pitch, 0f, 0f);
-    }
-
-    void UpdateCrouch()
-    {
-        if (controller == null || cameraTransform == null)
-        {
-            return;
-        }
-
-        float targetHeight = crouchHeld ? crouchHeight : standingHeight;
-        float targetCamY = crouchHeld ? crouchCameraHeight : standCameraHeight;
-        controller.height = Mathf.Lerp(controller.height, targetHeight, crouchLerpSpeed * Time.deltaTime);
-
-        Vector3 center = standingCenter;
-        center.y = controller.height * 0.5f;
-        controller.center = center;
-
-        cameraHeightCurrent = Mathf.Lerp(cameraHeightCurrent, targetCamY, crouchLerpSpeed * Time.deltaTime);
-        Vector3 rest = new Vector3(0f, cameraHeightCurrent, 0f);
-        if (headBob != null)
-        {
-            headBob.SetRestLocalPosition(rest);
-        }
-        else
-        {
-            Vector3 camLocal = cameraTransform.localPosition;
-            camLocal.y = cameraHeightCurrent;
-            cameraTransform.localPosition = camLocal;
+            DropObject();
         }
     }
 
-    void TickInteraction()
+    private void TryPickup()
     {
-        if (interactionRaycaster == null)
+        if (Physics.Raycast(
+            cameraTransform.position,
+            cameraTransform.forward,
+            out RaycastHit hit,
+            pickupRange))
         {
-            return;
-        }
+            Debug.Log("I hit: " + hit.collider.name);
 
-        interactionRaycaster.Tick(BuildContext());
-    }
+            Transform pickupRoot = hit.collider.transform;
 
-    InteractionContext BuildContext()
-    {
-        return new InteractionContext(this, cameraTransform, holdPoint, inventory);
-    }
-
-    void ResolveCamera()
-    {
-        if (cameraTransform == null)
-        {
-            Camera childCam = GetComponentInChildren<Camera>();
-            if (childCam != null)
+            while (pickupRoot != null)
             {
-                cameraTransform = childCam.transform;
+                if (pickupRoot.CompareTag("Pickup"))
+                    break;
+
+                pickupRoot = pickupRoot.parent;
+            }
+
+            if (pickupRoot != null)
+            {
+                heldObject = pickupRoot.gameObject;
+
+                heldObject.transform.SetParent(holdPoint);
+                heldObject.transform.localPosition = Vector3.zero;
+                heldObject.transform.localRotation = Quaternion.identity;
+
+                Rigidbody rb = heldObject.GetComponent<Rigidbody>();
+
+                if (rb == null)
+                    rb = heldObject.GetComponentInChildren<Rigidbody>();
+
+                if (rb != null)
+                    rb.isKinematic = true;
+
+                if (pickupAudio != null)
+                    pickupAudio.Play();
+
+                Debug.Log("PICKED UP: " + heldObject.name);
             }
             else
             {
-                Debug.LogWarning("[PlayerController] Camera Transform is not assigned on " + name + ".", this);
+                Debug.Log("This object and its parents are not tagged Pickup.");
             }
         }
-    }
-
-    void EnsureHoldPoint()
-    {
-        if (holdPoint != null)
+        else
         {
-            return;
-        }
-
-        Transform existing = transform.Find("HoldPoint");
-        if (existing != null)
-        {
-            holdPoint = existing;
-            return;
-        }
-
-        if (cameraTransform == null)
-        {
-            return;
-        }
-
-        GameObject point = new GameObject("HoldPoint");
-        point.transform.SetParent(cameraTransform);
-        point.transform.localPosition = new Vector3(0.35f, -0.2f, 0.6f);
-        point.transform.localRotation = Quaternion.identity;
-        holdPoint = point.transform;
-    }
-
-    void EnsureInteraction()
-    {
-        if (interactionRaycaster == null)
-        {
-            interactionRaycaster = GetComponent<InteractionRaycaster>();
-        }
-
-        if (interactionRaycaster == null)
-        {
-            interactionRaycaster = gameObject.AddComponent<InteractionRaycaster>();
-        }
-
-        interactionRaycaster.RayOrigin = cameraTransform;
-        interactionRaycaster.Range = pickupRange;
-
-        InteractionHUD hud = FindFirstObjectByType<InteractionHUD>();
-        if (hud == null)
-        {
-            GameObject hudObject = new GameObject("InteractionHUD");
-            hud = hudObject.AddComponent<InteractionHUD>();
-        }
-
-        hud.Raycaster = interactionRaycaster;
-    }
-
-    void EnsureInventory()
-    {
-        if (inventory == null)
-        {
-            inventory = GetComponent<InventorySystem>();
-        }
-
-        if (inventory == null)
-        {
-            inventory = gameObject.AddComponent<InventorySystem>();
-        }
-
-        InteractionHUD hud = FindFirstObjectByType<InteractionHUD>();
-        if (hud == null)
-        {
-            return;
-        }
-
-        HotbarHUD hotbar = hud.GetComponent<HotbarHUD>();
-        if (hotbar == null)
-        {
-            hotbar = hud.gameObject.AddComponent<HotbarHUD>();
-        }
-
-        hotbar.Inventory = inventory;
-    }
-
-    void EnsureHeadBobAndFootsteps()
-    {
-        if (cameraTransform == null)
-        {
-            return;
-        }
-
-        headBob = cameraTransform.GetComponent<HeadBob>();
-        if (headBob == null)
-        {
-            headBob = cameraTransform.gameObject.AddComponent<HeadBob>();
-        }
-
-        if (GetComponent<FootstepEmitter>() == null)
-        {
-            gameObject.AddComponent<FootstepEmitter>();
+            Debug.Log("Hit NOTHING - get closer and look directly at the object.");
         }
     }
 
-    void EnsureGameUi()
+    private void DropObject()
     {
-        if (GetComponent<ClueJournal>() == null)
-        {
-            gameObject.AddComponent<ClueJournal>();
-        }
-
-        if (GetComponent<ObjectiveTracker>() == null)
-        {
-            gameObject.AddComponent<ObjectiveTracker>();
-        }
-
-        InteractionHUD hud = FindFirstObjectByType<InteractionHUD>();
-        if (hud == null)
-        {
+        if (heldObject == null)
             return;
-        }
 
-        GameMenu menu = FindFirstObjectByType<GameMenu>();
-        if (menu == null)
+        if (pickupAudio != null && dropSound != null)
         {
-            menu = new GameObject("GameMenu").AddComponent<GameMenu>();
+            pickupAudio.PlayOneShot(dropSound);
         }
 
-        menu.Bind(this);
+        heldObject.transform.SetParent(null);
 
-        GameHUD gameHud = hud.GetComponent<GameHUD>();
-        if (gameHud == null)
-        {
-            gameHud = hud.gameObject.AddComponent<GameHUD>();
-        }
+        Rigidbody rb = heldObject.GetComponent<Rigidbody>();
 
-        gameHud.Bind(this, menu);
+        if (rb == null)
+            rb = heldObject.GetComponentInChildren<Rigidbody>();
+
+        if (rb != null)
+            rb.isKinematic = false;
+
+        Debug.Log("DROPPED: " + heldObject.name);
+
+        heldObject = null;
     }
 }
