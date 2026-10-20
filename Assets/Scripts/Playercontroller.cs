@@ -1,3 +1,4 @@
+
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -14,6 +15,18 @@ public class PlayerController : MonoBehaviour
     public Transform holdPoint;
     public float pickupRange = 3f;
 
+    [Header("Pickup Audio")]
+    public AudioSource pickupAudio;
+    public AudioClip dropSound;
+
+    [Header("Footstep Audio")]
+    public AudioSource footstepAudio;
+    public float footstepInterval = 0.5f;
+    [Range(0f, 1f)]
+    public float footstepVolume = 0.5f;
+
+    private float footstepTimer;
+
     private CharacterController controller;
     private PlayerInputActions inputActions;
 
@@ -26,12 +39,21 @@ public class PlayerController : MonoBehaviour
     {
         controller = GetComponent<CharacterController>();
         inputActions = new PlayerInputActions();
+
+        if (pickupAudio == null)
+        {
+            pickupAudio = GetComponent<AudioSource>();
+        }
+
+        if (footstepAudio != null)
+        {
+            footstepAudio.playOnAwake = false;
+            footstepAudio.loop = false;
+        }
     }
 
     private void OnEnable()
     {
-        inputActions.Enable();
-
         inputActions.Player.Move.performed += OnMove;
         inputActions.Player.Move.canceled += OnMove;
 
@@ -39,24 +61,25 @@ public class PlayerController : MonoBehaviour
         inputActions.Player.Look.canceled += OnLook;
 
         inputActions.Player.Interact.performed += OnInteract;
+
+        inputActions.Enable();
     }
 
     private void OnDisable()
-{
-    if (inputActions == null)
-        return;
+    {
+        if (inputActions == null)
+            return;
 
-    inputActions.Player.Move.performed -= OnMove;
-    inputActions.Player.Move.canceled -= OnMove;
+        inputActions.Player.Move.performed -= OnMove;
+        inputActions.Player.Move.canceled -= OnMove;
 
-    inputActions.Player.Look.performed -= OnLook;
-    inputActions.Player.Look.canceled -= OnLook;
+        inputActions.Player.Look.performed -= OnLook;
+        inputActions.Player.Look.canceled -= OnLook;
 
-    inputActions.Player.Interact.performed -= OnInteract;
+        inputActions.Player.Interact.performed -= OnInteract;
 
-    inputActions.Disable();
-}
-    
+        inputActions.Disable();
+    }
 
     private void OnMove(InputAction.CallbackContext context)
     {
@@ -72,6 +95,7 @@ public class PlayerController : MonoBehaviour
     {
         Move();
         Look();
+        HandleFootsteps();
     }
 
     private void Move()
@@ -85,6 +109,9 @@ public class PlayerController : MonoBehaviour
 
     private void Look()
     {
+        if (cameraTransform == null)
+            return;
+
         float mouseX = lookInput.x * mouseSensitivity * Time.deltaTime;
         float mouseY = lookInput.y * mouseSensitivity * Time.deltaTime;
 
@@ -92,93 +119,119 @@ public class PlayerController : MonoBehaviour
         cameraTransform.Rotate(Vector3.left * mouseY);
     }
 
-    private void OnInteract(InputAction.CallbackContext context)
-{
-    Debug.Log("E PRESSED");
-
-    if (heldObject == null)
+    private void HandleFootsteps()
     {
-        TryPickup();
-    }
-    else
-    {
-        DropObject();
-    }
-}
+        if (footstepAudio == null || footstepAudio.clip == null)
+            return;
 
-    private void TryPickup()
-{
-    if (Physics.Raycast(
-        cameraTransform.position,
-        cameraTransform.forward,
-        out RaycastHit hit,
-        pickupRange))
-    {
-        Debug.Log("I hit: " + hit.collider.name);
+        bool isMoving = moveInput.sqrMagnitude > 0.01f;
+        bool isGrounded = controller.isGrounded;
 
-        // Start with the object that was hit
-        Transform pickupRoot = hit.collider.transform;
-
-        // Keep going up through the parents until we find
-        // the object tagged "Pickup"
-        while (pickupRoot != null)
+        if (isMoving && isGrounded)
         {
-            if (pickupRoot.CompareTag("Pickup"))
+            footstepTimer -= Time.deltaTime;
+
+            if (footstepTimer <= 0f)
             {
-                break;
+                footstepAudio.PlayOneShot(
+                    footstepAudio.clip,
+                    footstepVolume
+                );
+
+                footstepTimer = footstepInterval;
             }
-
-            pickupRoot = pickupRoot.parent;
-        }
-
-        // If we found the Pickup tag
-        if (pickupRoot != null)
-        {
-            heldObject = pickupRoot.gameObject;
-
-            // Move the whole lamp to the HoldPoint
-            heldObject.transform.SetParent(holdPoint);
-
-            heldObject.transform.localPosition = Vector3.zero;
-            heldObject.transform.localRotation = Quaternion.identity;
-
-            // Find the Rigidbody on the lamp or its children
-            Rigidbody rb = heldObject.GetComponent<Rigidbody>();
-
-            if (rb == null)
-            {
-                rb = heldObject.GetComponentInChildren<Rigidbody>();
-            }
-
-            // Turn physics off while holding
-            if (rb != null)
-            {
-                rb.isKinematic = true;
-            }
-
-            Debug.Log("PICKED UP: " + heldObject.name);
         }
         else
         {
-            Debug.Log("This object and its parents are not tagged Pickup.");
+            footstepTimer = 0f;
         }
     }
-    else
+
+    private void OnInteract(InputAction.CallbackContext context)
     {
-        Debug.Log("Hit NOTHING - get closer and look directly at the object.");
+        Debug.Log("E PRESSED");
+
+        if (heldObject == null)
+        {
+            TryPickup();
+        }
+        else
+        {
+            DropObject();
+        }
     }
-}
+
+    private void TryPickup()
+    {
+        if (Physics.Raycast(
+            cameraTransform.position,
+            cameraTransform.forward,
+            out RaycastHit hit,
+            pickupRange))
+        {
+            Debug.Log("I hit: " + hit.collider.name);
+
+            Transform pickupRoot = hit.collider.transform;
+
+            while (pickupRoot != null)
+            {
+                if (pickupRoot.CompareTag("Pickup"))
+                    break;
+
+                pickupRoot = pickupRoot.parent;
+            }
+
+            if (pickupRoot != null)
+            {
+                heldObject = pickupRoot.gameObject;
+
+                heldObject.transform.SetParent(holdPoint);
+                heldObject.transform.localPosition = Vector3.zero;
+                heldObject.transform.localRotation = Quaternion.identity;
+
+                Rigidbody rb = heldObject.GetComponent<Rigidbody>();
+
+                if (rb == null)
+                    rb = heldObject.GetComponentInChildren<Rigidbody>();
+
+                if (rb != null)
+                    rb.isKinematic = true;
+
+                if (pickupAudio != null)
+                    pickupAudio.Play();
+
+                Debug.Log("PICKED UP: " + heldObject.name);
+            }
+            else
+            {
+                Debug.Log("This object and its parents are not tagged Pickup.");
+            }
+        }
+        else
+        {
+            Debug.Log("Hit NOTHING - get closer and look directly at the object.");
+        }
+    }
 
     private void DropObject()
     {
+        if (heldObject == null)
+            return;
+
+        if (pickupAudio != null && dropSound != null)
+        {
+            pickupAudio.PlayOneShot(dropSound);
+        }
+
         heldObject.transform.SetParent(null);
 
         Rigidbody rb = heldObject.GetComponent<Rigidbody>();
 
+        if (rb == null)
+            rb = heldObject.GetComponentInChildren<Rigidbody>();
+
         if (rb != null)
-        {
             rb.isKinematic = false;
-        }
 
         Debug.Log("DROPPED: " + heldObject.name);
 
