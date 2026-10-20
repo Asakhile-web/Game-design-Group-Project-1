@@ -61,6 +61,7 @@ public static class Stage1Greybox
         body.mass = 0.5f;
 
         Stage2Greybox.Spawn(root.transform);
+        Stage3Greybox.Spawn(root.transform);
 
         Debug.Log("[Stage1Greybox] Spawned fallback floor + test objects. Turn this off when the study room is in the scene.");
     }

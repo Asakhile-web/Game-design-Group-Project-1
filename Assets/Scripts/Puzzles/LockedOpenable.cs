@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Events;
 
 /// <summary>
 /// Door, drawer, or locker lid: optional key, then a local rotate or slide. No Animator.
@@ -19,6 +20,9 @@ public class LockedOpenable : MonoBehaviour, IInteractable, IItemUseTarget
     [SerializeField] bool consumeRequiredItem = true;
     [SerializeField] string closedVerb = "open";
     [SerializeField] string openVerb = "close";
+    [SerializeField] bool isExit;
+    [SerializeField] UnityEvent onOpened;
+    [SerializeField] UnityEvent onUnlocked;
 
     [Header("Motion")]
     [SerializeField] OpenMotion motion = OpenMotion.RotateYaw;
@@ -34,6 +38,11 @@ public class LockedOpenable : MonoBehaviour, IInteractable, IItemUseTarget
 
     public bool IsLocked => locked;
     public bool IsOpen => isOpen;
+    public bool IsExit
+    {
+        get => isExit;
+        set => isExit = value;
+    }
 
     public ItemDefinition RequiredItem
     {
@@ -93,6 +102,17 @@ public class LockedOpenable : MonoBehaviour, IInteractable, IItemUseTarget
     {
         if (locked)
         {
+            if (isExit)
+            {
+                PuzzleManager puzzles = PuzzleManager.Instance;
+                if (puzzles != null && puzzles.AreAllRequiredSolved())
+                {
+                    return "Press E to leave";
+                }
+
+                return "Locked — solve the remaining puzzles";
+            }
+
             string need = requiredItem != null ? requiredItem.DisplayName : "a key";
             if (requiredItem != null && context.Inventory != null && context.Inventory.Has(requiredItem))
             {
@@ -109,6 +129,20 @@ public class LockedOpenable : MonoBehaviour, IInteractable, IItemUseTarget
     {
         if (locked)
         {
+            if (isExit)
+            {
+                PuzzleManager puzzles = PuzzleManager.Instance;
+                if (puzzles != null && puzzles.AreAllRequiredSolved())
+                {
+                    Unlock(openAfter: true);
+                    puzzles.NotifyExitUsed();
+                    return;
+                }
+
+                InteractionHUD.Toast("The exit is still locked");
+                return;
+            }
+
             if (requiredItem != null && context.Inventory != null && context.Inventory.Has(requiredItem))
             {
                 TryUnlockWith(requiredItem, context, openAfter: true);
@@ -161,15 +195,30 @@ public class LockedOpenable : MonoBehaviour, IInteractable, IItemUseTarget
     public void Unlock(bool openAfter)
     {
         locked = false;
+        onUnlocked?.Invoke();
+        AudioManager.Play(AudioCue.Door);
         if (openAfter && !isOpen)
         {
             isOpen = true;
+            onOpened?.Invoke();
+            CameraImpulse.Shake(0.08f, 0.15f);
         }
     }
 
     public void Toggle()
     {
         isOpen = !isOpen;
+        AudioManager.Play(AudioCue.Door);
+        CameraImpulse.Shake(0.06f, 0.12f);
+        if (isOpen)
+        {
+            onOpened?.Invoke();
+        }
+
+        if (isExit && isOpen)
+        {
+            PuzzleManager.Instance?.NotifyExitUsed();
+        }
     }
 
     bool TryUnlockWith(ItemDefinition item, InteractionContext context, bool openAfter)

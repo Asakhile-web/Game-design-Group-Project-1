@@ -11,7 +11,8 @@ using UnityEngine.UI;
 /// <summary>
 /// Central pause state + in-scene overlay menus. Every overlay (pause, inventory, journal, settings, confirm)
 /// is pushed onto one stack: the game is paused while the stack is non-empty, Escape/Back pops one level,
-/// and only popping the last panel resumes gameplay. This is the only place that changes Time.timeScale.
+/// and only popping the last panel resumes gameplay. Pause uses Time.timeScale = 0; GameFlow also
+/// freezes time on the win/lose screen.
 /// </summary>
 public class GameMenu : MonoBehaviour
 {
@@ -138,6 +139,16 @@ public class GameMenu : MonoBehaviour
 
     public void TogglePause()
     {
+        if (GameFlow.Instance != null && GameFlow.Instance.IsEnded)
+        {
+            return;
+        }
+
+        if (stack.Count == 0 && GameOverlay.TryHandleEscape())
+        {
+            return;
+        }
+
         if (stack.Count == 0)
         {
             Open(Screen.Pause);
@@ -203,7 +214,7 @@ public class GameMenu : MonoBehaviour
                 Time.timeScale = 1f;
                 AudioListener.pause = false;
                 GameSettings.Save();
-                SceneManager.LoadScene(mainMenuScene);
+                GameFlow.LoadScene(mainMenuScene);
             });
     }
 
@@ -429,7 +440,7 @@ public class GameMenu : MonoBehaviour
         AddPanel<PausePanel>(Screen.Pause, new Vector2(520f, 640f));
         AddPanel<InventoryPanel>(Screen.Inventory, new Vector2(1080f, 640f));
         AddPanel<JournalPanel>(Screen.Journal, new Vector2(1180f, 700f));
-        AddPanel<SettingsPanel>(Screen.Settings, new Vector2(820f, 600f));
+        AddPanel<SettingsPanel>(Screen.Settings, new Vector2(820f, 720f));
         AddPanel<ConfirmPanel>(Screen.Confirm, new Vector2(680f, 320f));
 
         HideAll();

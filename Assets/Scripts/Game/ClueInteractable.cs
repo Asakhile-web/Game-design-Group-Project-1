@@ -60,13 +60,8 @@ public class ClueInteractable : MonoBehaviour, IInteractable
             return;
         }
 
-        if (!journal.Discover(clue))
-        {
-            InteractionHUD.Toast("Already in your journal (J)");
-            return;
-        }
-
-        if (!string.IsNullOrEmpty(objectiveOnDiscover))
+        bool first = journal.Discover(clue);
+        if (first && !string.IsNullOrEmpty(objectiveOnDiscover))
         {
             ObjectiveTracker tracker = context.Player != null ? context.Player.GetComponent<ObjectiveTracker>() : null;
             if (tracker == null)
@@ -78,8 +73,10 @@ public class ClueInteractable : MonoBehaviour, IInteractable
             {
                 tracker.SetObjective(objectiveOnDiscover);
             }
+
+            onDiscovered?.Invoke();
         }
 
-        onDiscovered?.Invoke();
+        NoteReader.Open(clue);
     }
 }

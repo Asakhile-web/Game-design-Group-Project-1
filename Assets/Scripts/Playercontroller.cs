@@ -87,6 +87,8 @@ public class PlayerController : MonoBehaviour
         EnsureHeadBobAndFootsteps();
         EnsureGameUi();
 
+        SystemsBootstrap.Ensure(this);
+
         if (spawnFallbackGreybox)
         {
             Stage1Greybox.Ensure(this);

@@ -9,6 +9,10 @@ public class SettingsPanel : MenuPanel
 {
     Slider volume;
     TextMeshProUGUI volumeValue;
+    Slider music;
+    TextMeshProUGUI musicValue;
+    Slider sfx;
+    TextMeshProUGUI sfxValue;
     Slider sensitivity;
     TextMeshProUGUI sensitivityValue;
     Toggle headBob;
@@ -33,6 +37,20 @@ public class SettingsPanel : MenuPanel
         {
             GameSettings.MasterVolume = value;
             volumeValue.text = Mathf.RoundToInt(value * 100f) + "%";
+        });
+
+        control = UiKit.CreateSettingRow(Root, "Music", out musicValue);
+        music = UiKit.CreateSlider(control, 0f, 1f, GameSettings.MusicVolume, value =>
+        {
+            GameSettings.MusicVolume = value;
+            musicValue.text = Mathf.RoundToInt(value * 100f) + "%";
+        });
+
+        control = UiKit.CreateSettingRow(Root, "SFX", out sfxValue);
+        sfx = UiKit.CreateSlider(control, 0f, 1f, GameSettings.SfxVolume, value =>
+        {
+            GameSettings.SfxVolume = value;
+            sfxValue.text = Mathf.RoundToInt(value * 100f) + "%";
         });
 
         control = UiKit.CreateSettingRow(Root, "Mouse Sensitivity", out sensitivityValue);
@@ -74,6 +92,11 @@ public class SettingsPanel : MenuPanel
         float currentVolume = GameSettings.MasterVolume;
         volume.SetValueWithoutNotify(currentVolume);
         volumeValue.text = Mathf.RoundToInt(currentVolume * 100f) + "%";
+
+        music.SetValueWithoutNotify(GameSettings.MusicVolume);
+        musicValue.text = Mathf.RoundToInt(GameSettings.MusicVolume * 100f) + "%";
+        sfx.SetValueWithoutNotify(GameSettings.SfxVolume);
+        sfxValue.text = Mathf.RoundToInt(GameSettings.SfxVolume * 100f) + "%";
 
         float currentSensitivity = Menu.Player != null ? Menu.Player.MouseSensitivity : GameSettings.GetMouseSensitivity(0.12f);
         sensitivity.SetValueWithoutNotify(currentSensitivity);

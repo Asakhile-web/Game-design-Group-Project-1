@@ -187,7 +187,7 @@ public class GameHUD : MonoBehaviour
 
     static string ControlsHint =>
         "<b>WASD</b> move   <b>Shift</b> sprint   <b>Ctrl</b> crouch   <b>E</b> interact   <b>F</b> use item\n" +
-        "<b>1-5</b> select   <b>Tab</b> inventory   <b>J</b> journal   <b>Esc</b> pause   <b>Hold Alt</b> cursor";
+        "<b>1-5</b> select   <b>Tab</b> inventory   <b>J</b> journal   <b>H</b> hint   <b>Esc</b> pause   <b>Hold Alt</b> cursor";
 
     void LateUpdate()
     {
@@ -196,9 +196,19 @@ public class GameHUD : MonoBehaviour
             return;
         }
 
-        if (timerText != null && timerText.gameObject.activeSelf && objectives != null)
+        if (timerText != null && timerText.gameObject.activeSelf)
         {
-            timerText.text = UiKit.FormatTime(objectives.ElapsedSeconds);
+            GameFlow flow = GameFlow.Instance;
+            if (flow != null && flow.UsesCountdown)
+            {
+                timerText.text = UiKit.FormatTime(flow.RemainingSeconds);
+                timerText.color = flow.IsLowTime ? new Color(0.95f, 0.35f, 0.28f) : UiKit.TextDim;
+            }
+            else if (objectives != null)
+            {
+                timerText.text = UiKit.FormatTime(objectives.ElapsedSeconds);
+                timerText.color = UiKit.TextDim;
+            }
         }
 
         bool paused = menu != null && menu.IsPaused;

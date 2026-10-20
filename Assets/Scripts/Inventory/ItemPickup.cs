@@ -47,6 +47,8 @@ public class ItemPickup : MonoBehaviour, IInteractable
         }
 
         taken = true;
+        AudioManager.Play(AudioCue.Pickup);
+        PickupVfxPool.Play(transform.position);
 
         Rigidbody body = GetComponent<Rigidbody>();
         if (body != null)

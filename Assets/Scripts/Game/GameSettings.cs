@@ -8,6 +8,8 @@ using UnityEngine;
 public static class GameSettings
 {
     const string VolumeKey = "settings.masterVolume";
+    const string MusicKey = "settings.musicVolume";
+    const string SfxKey = "settings.sfxVolume";
     const string SensitivityKey = "settings.mouseSensitivity";
     const string HeadBobKey = "settings.headBob";
     const string ShowTimerKey = "settings.showTimer";
@@ -26,6 +28,26 @@ public static class GameSettings
             value = Mathf.Clamp01(value);
             PlayerPrefs.SetFloat(VolumeKey, value);
             AudioListener.volume = value;
+            Changed?.Invoke();
+        }
+    }
+
+    public static float MusicVolume
+    {
+        get => PlayerPrefs.GetFloat(MusicKey, 0.6f);
+        set
+        {
+            PlayerPrefs.SetFloat(MusicKey, Mathf.Clamp01(value));
+            Changed?.Invoke();
+        }
+    }
+
+    public static float SfxVolume
+    {
+        get => PlayerPrefs.GetFloat(SfxKey, 1f);
+        set
+        {
+            PlayerPrefs.SetFloat(SfxKey, Mathf.Clamp01(value));
             Changed?.Invoke();
         }
     }

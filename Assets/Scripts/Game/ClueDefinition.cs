@@ -10,10 +10,12 @@ public class ClueDefinition : ScriptableObject
     [SerializeField] string id = "clue";
     [SerializeField] string title = "Clue";
     [TextArea(3, 10)] [SerializeField] string description;
+    [SerializeField] Sprite image;
 
     public string Id => id;
     public string Title => title;
     public string Description => description;
+    public Sprite Image => image;
 
     public bool Matches(ClueDefinition other)
     {
