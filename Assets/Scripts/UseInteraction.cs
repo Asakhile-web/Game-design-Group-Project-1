@@ -1,3 +1,4 @@
+
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -12,8 +13,8 @@ public class UseInteraction : MonoBehaviour
     {
         if (useAction != null)
         {
-            useAction.action.Enable();
             useAction.action.performed += OnUse;
+            useAction.action.Enable();
         }
     }
 
@@ -28,6 +29,14 @@ public class UseInteraction : MonoBehaviour
 
     private void OnUse(InputAction.CallbackContext context)
     {
+        Debug.Log("F KEY PRESSED");
+
+        if (cameraTransform == null)
+        {
+            Debug.LogError("Camera Transform is not assigned!");
+            return;
+        }
+
         Ray ray = new Ray(
             cameraTransform.position,
             cameraTransform.forward
@@ -35,17 +44,24 @@ public class UseInteraction : MonoBehaviour
 
         if (Physics.Raycast(ray, out RaycastHit hit, useRange))
         {
-            UsableDrawer drawer = hit.collider.GetComponentInParent<UsableDrawer>();
+            Debug.Log("F is hitting: " + hit.collider.name);
+
+            UsableDrawer drawer =
+                hit.collider.GetComponentInParent<UsableDrawer>();
 
             if (drawer != null)
             {
                 drawer.Use();
-                Debug.Log("USED: " + drawer.gameObject.name);
+                Debug.Log("USED DRAWER: " + drawer.gameObject.name);
             }
             else
             {
-                Debug.Log("This object cannot be used.");
+                Debug.Log("No UsableDrawer found on the hit object or its parents.");
             }
+        }
+        else
+        {
+            Debug.Log("F raycast hit nothing. Look closer at the drawer.");
         }
     }
 }
