@@ -10,7 +10,7 @@ using UnityEngine.UI;
 /// </summary>
 public class GameFlow : MonoBehaviour
 {
-    public const string DefaultGameplayScene = "unity assignment 1";
+    public const string DefaultGameplayScene = "Writers Study Greybox";
     public const string DefaultMainMenuScene = "MainMenu";
 
     [Header("Scenes")]

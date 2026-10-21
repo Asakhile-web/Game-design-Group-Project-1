@@ -255,7 +255,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7e4c1a9b2d8f4e6a0c3b5d7e9f1a2b3c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MainMenuController
-  gameplayScene: unity assignment 1
+  gameplayScene: Writers Study Greybox
   gameTitle: Writer's Study
   subtitle: A study escape
 --- !u!1660057539 &9223372036854775807

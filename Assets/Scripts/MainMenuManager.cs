@@ -10,7 +10,7 @@ public class MainMenuManager : MonoBehaviour
 
     public void NewGame()
     {
-        SceneManager.LoadScene(1);
+        SceneManager.LoadScene(GameFlow.DefaultGameplayScene);
     }
 
     public void OpenSettings()

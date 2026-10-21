@@ -59,7 +59,8 @@ public class MainMenuController : MonoBehaviour
     void Play()
     {
         AudioManager.Play(AudioCue.UiClick);
-        GameFlow.LoadScene(gameplayScene);
+        string scene = string.IsNullOrEmpty(gameplayScene) ? GameFlow.DefaultGameplayScene : gameplayScene;
+        GameFlow.LoadScene(scene);
     }
 
     void Show(Page next)
