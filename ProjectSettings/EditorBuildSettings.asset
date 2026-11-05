@@ -6,6 +6,9 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/Scenes/Writer's Study Final.unity
+    guid: b601d828f185863479886b9c7bd67465
+  - enabled: 1
     path: Assets/Scenes/MainMenu.unity
     guid: 1a2b3c4d5e6f7081920a3b4c5d6e7f80
   - enabled: 1
