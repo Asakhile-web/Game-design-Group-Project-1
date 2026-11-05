@@ -118819,15 +118819,23 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController
   moveSpeed: 5
+  sprintSpeed: 8
+  gravity: -18
+  crouchSpeedMultiplier: 0.5
+  crouchHeight: 1.2
+  crouchCameraHeight: 0.9
+  standCameraHeight: 1.6
+  crouchLerpSpeed: 10
   mouseSensitivity: 2
+  minPitch: -80
+  maxPitch: 80
   cameraTransform: {fileID: 720676192}
   holdPoint: {fileID: 613911740}
   pickupRange: 3
-  pickupAudio: {fileID: 1118908513}
-  dropSound: {fileID: 8300000, guid: 1c0ec90ee5e3a8742a7bf7aca5791a18, type: 3}
-  footstepAudio: {fileID: 1118908515}
-  footstepInterval: 0.5
-  footstepVolume: 0.5
+  interactionRaycaster: {fileID: 0}
+  inventory: {fileID: 0}
+  spawnFallbackGreybox: 1
+  lockCursorOnStart: 1
 --- !u!114 &1118908512
 MonoBehaviour:
   m_ObjectHideFlags: 0
