@@ -1,3 +1,4 @@
+
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -28,6 +29,7 @@ public class HotbarHUD : MonoBehaviour
             }
 
             inventory = value;
+
             if (inventory != null && isActiveAndEnabled)
             {
                 inventory.Changed += Refresh;
@@ -61,18 +63,23 @@ public class HotbarHUD : MonoBehaviour
     void Refresh()
     {
         EnsureUi();
+
         if (inventory == null || slotLabels == null)
         {
             return;
         }
 
         int selected = inventory.SelectedIndex;
+
         for (int i = 0; i < InventorySystem.SlotCount; i++)
         {
             ItemDefinition item = inventory.GetSlot(i);
-            string name = item != null ? item.DisplayName : "—";
-            slotLabels[i].text = (i + 1) + "  " + name;
+            string itemName = item != null ? item.DisplayName : "—";
+
+            slotLabels[i].text = (i + 1) + "  " + itemName;
+
             bool on = i == selected;
+
             slotLabels[i].color = on ? textSelected : textIdle;
             slotBackgrounds[i].color = on ? slotSelected : slotIdle;
         }
@@ -87,14 +94,19 @@ public class HotbarHUD : MonoBehaviour
 
         Transform existing = transform.Find("Hotbar");
         RectTransform row;
+
         if (existing != null)
         {
             row = existing.GetComponent<RectTransform>();
         }
         else
         {
-            GameObject rowObject = new GameObject("Hotbar", typeof(RectTransform));
+            GameObject rowObject = new GameObject(
+                "Hotbar",
+                typeof(RectTransform));
+
             rowObject.transform.SetParent(transform, false);
+
             row = rowObject.GetComponent<RectTransform>();
             row.anchorMin = new Vector2(0.5f, 0f);
             row.anchorMax = new Vector2(0.5f, 0f);
@@ -102,7 +114,9 @@ public class HotbarHUD : MonoBehaviour
             row.anchoredPosition = new Vector2(0f, 36f);
             row.sizeDelta = new Vector2(920f, 56f);
 
-            HorizontalLayoutGroup layout = rowObject.AddComponent<HorizontalLayoutGroup>();
+            HorizontalLayoutGroup layout =
+                rowObject.AddComponent<HorizontalLayoutGroup>();
+
             layout.spacing = 8f;
             layout.childAlignment = TextAnchor.MiddleCenter;
             layout.childForceExpandWidth = true;
@@ -117,22 +131,30 @@ public class HotbarHUD : MonoBehaviour
         {
             Transform child = row.Find("Slot" + (i + 1));
             GameObject slotObject;
+
             if (child != null)
             {
                 slotObject = child.gameObject;
             }
             else
             {
-                slotObject = new GameObject("Slot" + (i + 1), typeof(RectTransform), typeof(Image));
+                slotObject = new GameObject(
+                    "Slot" + (i + 1),
+                    typeof(RectTransform),
+                    typeof(Image));
+
                 slotObject.transform.SetParent(row, false);
             }
 
             Image bg = slotObject.GetComponent<Image>();
             bg.color = slotIdle;
             bg.raycastTarget = false;
+
             slotBackgrounds[i] = bg;
 
-            LayoutElement layoutElement = slotObject.GetComponent<LayoutElement>();
+            LayoutElement layoutElement =
+                slotObject.GetComponent<LayoutElement>();
+
             if (layoutElement == null)
             {
                 layoutElement = slotObject.AddComponent<LayoutElement>();
@@ -141,26 +163,40 @@ public class HotbarHUD : MonoBehaviour
             layoutElement.flexibleWidth = 1f;
             layoutElement.minHeight = 52f;
 
-            Transform labelTransform = slotObject.transform.Find("Label");
+            Transform labelTransform =
+                slotObject.transform.Find("Label");
+
             TextMeshProUGUI label;
+
             if (labelTransform != null)
             {
                 label = labelTransform.GetComponent<TextMeshProUGUI>();
             }
             else
             {
-                GameObject labelObject = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
-                labelObject.transform.SetParent(slotObject.transform, false);
-                RectTransform labelRect = labelObject.GetComponent<RectTransform>();
+                GameObject labelObject = new GameObject(
+                    "Label",
+                    typeof(RectTransform),
+                    typeof(TextMeshProUGUI));
+
+                labelObject.transform.SetParent(
+                    slotObject.transform,
+                    false);
+
+                RectTransform labelRect =
+                    labelObject.GetComponent<RectTransform>();
+
                 labelRect.anchorMin = Vector2.zero;
                 labelRect.anchorMax = Vector2.one;
                 labelRect.offsetMin = new Vector2(8f, 4f);
                 labelRect.offsetMax = new Vector2(-8f, -4f);
+
                 label = labelObject.GetComponent<TextMeshProUGUI>();
+
                 label.alignment = TextAlignmentOptions.MidlineLeft;
                 label.fontSize = 18f;
                 label.raycastTarget = false;
-                label.enableWordWrapping = false;
+                label.textWrappingMode = TextWrappingModes.NoWrap;
                 label.overflowMode = TextOverflowModes.Ellipsis;
             }
 

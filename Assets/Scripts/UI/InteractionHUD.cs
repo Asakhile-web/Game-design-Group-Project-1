@@ -1,9 +1,11 @@
+
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// Crosshair + "Press E to …" prompt. Builds a Canvas at runtime if Inspector refs are empty so Play Mode still works.
+/// Crosshair + "Press E to …" prompt.
+/// Builds a Canvas at runtime if Inspector refs are empty.
 /// </summary>
 public class InteractionHUD : MonoBehaviour
 {
@@ -64,6 +66,7 @@ public class InteractionHUD : MonoBehaviour
     public void ShowToast(string message, float seconds = 2f)
     {
         EnsureUi();
+
         if (toastLabel == null)
         {
             Debug.Log("[Toast] " + message);
@@ -78,10 +81,14 @@ public class InteractionHUD : MonoBehaviour
     void LateUpdate()
     {
         bool hover = raycaster != null && raycaster.HasTarget;
+
         if (promptLabel != null)
         {
             string line = hover ? raycaster.CurrentPrompt : string.Empty;
-            if (hover && !string.IsNullOrEmpty(raycaster.CurrentUsePrompt) && raycaster.CurrentUsePrompt != line)
+
+            if (hover &&
+                !string.IsNullOrEmpty(raycaster.CurrentUsePrompt) &&
+                raycaster.CurrentUsePrompt != line)
             {
                 line = string.IsNullOrEmpty(line)
                     ? raycaster.CurrentUsePrompt
@@ -95,12 +102,19 @@ public class InteractionHUD : MonoBehaviour
         if (crosshair != null)
         {
             float size = hover ? hoverSize : idleSize;
-            crosshair.sizeDelta = Vector2.Lerp(crosshair.sizeDelta, new Vector2(size, size), 18f * Time.deltaTime);
+
+            crosshair.sizeDelta = Vector2.Lerp(
+                crosshair.sizeDelta,
+                new Vector2(size, size),
+                18f * Time.deltaTime);
         }
 
         if (crosshairImage != null)
         {
-            crosshairImage.color = Color.Lerp(crosshairImage.color, hover ? hoverCrosshair : idleCrosshair, 18f * Time.deltaTime);
+            crosshairImage.color = Color.Lerp(
+                crosshairImage.color,
+                hover ? hoverCrosshair : idleCrosshair,
+                18f * Time.deltaTime);
         }
 
         if (toastLabel != null && Time.unscaledTime >= toastUntil)
@@ -119,25 +133,34 @@ public class InteractionHUD : MonoBehaviour
         }
 
         Canvas canvas = GetComponent<Canvas>();
+
         if (canvas == null)
         {
             canvas = gameObject.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = 100;
+
             CanvasScaler scaler = gameObject.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920f, 1080f);
+
             gameObject.AddComponent<GraphicRaycaster>();
         }
 
         if (crosshair == null)
         {
-            GameObject cross = new GameObject("Crosshair", typeof(RectTransform), typeof(Image));
+            GameObject cross = new GameObject(
+                "Crosshair",
+                typeof(RectTransform),
+                typeof(Image));
+
             cross.transform.SetParent(transform, false);
+
             crosshair = cross.GetComponent<RectTransform>();
             crosshair.anchorMin = new Vector2(0.5f, 0.5f);
             crosshair.anchorMax = new Vector2(0.5f, 0.5f);
             crosshair.sizeDelta = new Vector2(idleSize, idleSize);
+
             crosshairImage = cross.GetComponent<Image>();
             crosshairImage.color = idleCrosshair;
             crosshairImage.raycastTarget = false;
@@ -149,29 +172,43 @@ public class InteractionHUD : MonoBehaviour
 
         if (promptLabel == null)
         {
-            GameObject prompt = new GameObject("Prompt", typeof(RectTransform), typeof(TextMeshProUGUI));
+            GameObject prompt = new GameObject(
+                "Prompt",
+                typeof(RectTransform),
+                typeof(TextMeshProUGUI));
+
             prompt.transform.SetParent(transform, false);
+
             RectTransform rect = prompt.GetComponent<RectTransform>();
             rect.anchorMin = new Vector2(0.5f, 0.28f);
             rect.anchorMax = new Vector2(0.5f, 0.28f);
             rect.sizeDelta = new Vector2(800f, 80f);
+
             promptLabel = prompt.GetComponent<TextMeshProUGUI>();
             promptLabel.alignment = TextAlignmentOptions.Center;
             promptLabel.fontSize = 28f;
             promptLabel.color = idleCrosshair;
             promptLabel.raycastTarget = false;
             promptLabel.text = string.Empty;
-            promptLabel.enableWordWrapping = true;
+
+            // FIXED: use promptLabel instead of the nonexistent text variable.
+            promptLabel.textWrappingMode = TextWrappingModes.Normal;
         }
 
         if (toastLabel == null)
         {
-            GameObject toast = new GameObject("Toast", typeof(RectTransform), typeof(TextMeshProUGUI));
+            GameObject toast = new GameObject(
+                "Toast",
+                typeof(RectTransform),
+                typeof(TextMeshProUGUI));
+
             toast.transform.SetParent(transform, false);
+
             RectTransform toastRect = toast.GetComponent<RectTransform>();
             toastRect.anchorMin = new Vector2(0.5f, 0.18f);
             toastRect.anchorMax = new Vector2(0.5f, 0.18f);
             toastRect.sizeDelta = new Vector2(900f, 40f);
+
             toastLabel = toast.GetComponent<TextMeshProUGUI>();
             toastLabel.alignment = TextAlignmentOptions.Center;
             toastLabel.fontSize = 24f;

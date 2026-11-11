@@ -4,21 +4,38 @@ using UnityEngine;
 public class UsableDrawer : MonoBehaviour
 {
     [Header("Drawer Settings")]
-    public Vector3 openOffset = new Vector3(0.4f, 0f, 0f);
+    public float openDistance = 0.4f;
     public float openSpeed = 3f;
+
+    [Header("Movement Direction")]
+    public Transform cabinet;
 
     [Header("Audio")]
     public AudioSource drawerAudio;
 
     private Vector3 closedPosition;
     private Vector3 openPosition;
+
     private bool isOpen;
     private bool isMoving;
 
     private void Start()
     {
-        closedPosition = transform.localPosition;
-        openPosition = closedPosition + openOffset;
+        closedPosition = transform.position;
+
+        if (cabinet != null)
+        {
+            // Move towards the front of the cabinet
+            openPosition = closedPosition - cabinet.forward * openDistance;
+        }
+        else if (transform.parent != null)
+        {
+            openPosition = closedPosition - transform.parent.forward * openDistance;
+        }
+        else
+        {
+            openPosition = closedPosition - transform.forward * openDistance;
+        }
 
         if (drawerAudio == null)
         {
@@ -47,15 +64,15 @@ public class UsableDrawer : MonoBehaviour
 
         Vector3 targetPosition = isOpen ? openPosition : closedPosition;
 
-        transform.localPosition = Vector3.MoveTowards(
-            transform.localPosition,
+        transform.position = Vector3.MoveTowards(
+            transform.position,
             targetPosition,
             openSpeed * Time.deltaTime
         );
 
-        if (Vector3.Distance(transform.localPosition, targetPosition) < 0.001f)
+        if (Vector3.Distance(transform.position, targetPosition) < 0.001f)
         {
-            transform.localPosition = targetPosition;
+            transform.position = targetPosition;
             isMoving = false;
         }
     }
