@@ -3,7 +3,6 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Serialization;
 
-[RequireComponent(typeof(CharacterController))]
 public class PlayerController : MonoBehaviour
 {
     [Header("Movement")]
