@@ -1,11 +1,8 @@
+
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Serialization;
 
-/// <summary>
-/// First-person move/look. Extends the original prototype: gravity, sprint, crouch, pitch clamp,
-/// cursor lock, InteractionRaycaster, and a five-slot InventorySystem (F / click to use on a target).
-/// </summary>
 [RequireComponent(typeof(CharacterController))]
 public class PlayerController : MonoBehaviour
 {
@@ -32,8 +29,15 @@ public class PlayerController : MonoBehaviour
     [SerializeField] InteractionRaycaster interactionRaycaster;
     [SerializeField] InventorySystem inventory;
 
+    [Header("Pickup and Drop")]
+    [SerializeField] float pickupDistance = 3f;
+    [SerializeField] AudioSource pickupDropAudio;
+    [SerializeField] AudioClip pickupSound;
+    [SerializeField] AudioClip dropSound;
+
+    Rigidbody heldObject;
+
     [Header("Stage 1 convenience")]
-    [Tooltip("If the scene is empty, spawn a floor, light, and a test interactable so gravity/E can be tested.")]
     [SerializeField] bool spawnFallbackGreybox = true;
     [SerializeField] bool lockCursorOnStart = true;
 
@@ -65,7 +69,6 @@ public class PlayerController : MonoBehaviour
     public Transform HoldPoint => holdPoint;
     public InventorySystem Inventory => inventory;
 
-    /// <summary>Effective look sensitivity (legacy Inspector values >= 1 are converted).</summary>
     public float MouseSensitivity
     {
         get => mouseSensitivity >= 1f ? mouseSensitivity * 0.06f : mouseSensitivity;
@@ -97,12 +100,10 @@ public class PlayerController : MonoBehaviour
 
     void OnEnable()
     {
-        if (inputActions == null)
-        {
-            return;
-        }
+        if (inputActions == null) return;
 
         inputActions.Enable();
+
         inputActions.Player.Move.performed += OnMove;
         inputActions.Player.Move.canceled += OnMove;
         inputActions.Player.Look.performed += OnLook;
@@ -194,14 +195,39 @@ public class PlayerController : MonoBehaviour
         crouchHeld = context.ReadValueAsButton();
     }
 
+    // E picks up an object or drops the currently held object.
     void OnInteract(InputAction.CallbackContext context)
     {
         if (!context.performed || !controlEnabled)
+            return;
+
+        // If already holding an object, E drops it.
+        if (heldObject != null)
         {
+            DropObject();
             return;
         }
 
+        if (cameraTransform == null || holdPoint == null)
+            return;
+
+        Ray ray = new Ray(cameraTransform.position, cameraTransform.forward);
+
+        if (Physics.Raycast(ray, out RaycastHit hit, pickupDistance))
+        {
+            Rigidbody rb = hit.collider.GetComponentInParent<Rigidbody>();
+
+            // Pick up only objects tagged Pickup.
+            if (rb != null && rb.CompareTag("Pickup"))
+            {
+                PickupObject(rb);
+                return;
+            }
+        }
+
+        // If no pickup object was found, use the existing interaction system.
         InteractionContext interaction = BuildContext();
+
         if (interactionRaycaster != null)
         {
             if (!interactionRaycaster.TryInteract(interaction))
@@ -215,12 +241,56 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    void PickupObject(Rigidbody rb)
+    {
+        if (rb == null || holdPoint == null)
+            return;
+
+        heldObject = rb;
+
+        heldObject.transform.SetParent(holdPoint);
+        heldObject.transform.localPosition = Vector3.zero;
+        heldObject.transform.localRotation = Quaternion.identity;
+
+        heldObject.isKinematic = true;
+        heldObject.useGravity = false;
+
+        heldObject.linearVelocity = Vector3.zero;
+        heldObject.angularVelocity = Vector3.zero;
+
+        if (pickupDropAudio != null && pickupSound != null)
+        {
+            pickupDropAudio.PlayOneShot(pickupSound);
+        }
+
+        Debug.Log("[PlayerController] Object picked up.", this);
+    }
+
+    void DropObject()
+    {
+        if (heldObject == null)
+            return;
+
+        Rigidbody objectToDrop = heldObject;
+
+        heldObject = null;
+
+        objectToDrop.transform.SetParent(null);
+        objectToDrop.isKinematic = false;
+        objectToDrop.useGravity = true;
+
+        if (pickupDropAudio != null && dropSound != null)
+        {
+            pickupDropAudio.PlayOneShot(dropSound);
+        }
+
+        Debug.Log("[PlayerController] Object dropped.", this);
+    }
+
     void OnUseItem(InputAction.CallbackContext context)
     {
         if (!context.performed || !controlEnabled)
-        {
             return;
-        }
 
         if (interactionRaycaster == null)
         {
@@ -234,12 +304,12 @@ public class PlayerController : MonoBehaviour
     void OnHotbar(InputAction.CallbackContext context)
     {
         if (!context.performed || !controlEnabled || inventory == null)
-        {
             return;
-        }
 
         string actionName = context.action.name;
-        if (actionName.Length > 6 && int.TryParse(actionName.Substring(6), out int slot))
+
+        if (actionName.Length > 6 &&
+            int.TryParse(actionName.Substring(6), out int slot))
         {
             inventory.SelectSlot(slot - 1);
         }
@@ -248,11 +318,10 @@ public class PlayerController : MonoBehaviour
     void Move()
     {
         if (controller == null)
-        {
             return;
-        }
 
         float speed = moveSpeed;
+
         if (sprintHeld && !crouchHeld)
         {
             speed = sprintSpeed;
@@ -262,11 +331,11 @@ public class PlayerController : MonoBehaviour
             speed *= crouchSpeedMultiplier;
         }
 
-        Vector3 planar = (transform.right * moveInput.x + transform.forward * moveInput.y);
+        Vector3 planar = transform.right * moveInput.x +
+                         transform.forward * moveInput.y;
+
         if (planar.sqrMagnitude > 1f)
-        {
             planar.Normalize();
-        }
 
         if (controller.isGrounded && verticalVelocity < 0f)
         {
@@ -279,20 +348,21 @@ public class PlayerController : MonoBehaviour
 
         Vector3 velocity = planar * speed;
         velocity.y = verticalVelocity;
+
         controller.Move(velocity * Time.deltaTime);
     }
 
     void Look()
     {
         if (cameraTransform == null || !controlEnabled)
-        {
             return;
-        }
 
-        // Mouse delta is already per-frame; do not multiply by Time.deltaTime or look becomes FPS-dependent.
-        // Values >= 1 are treated as the old Time.deltaTime-scaled Inspector range (scene still has 2).
-        float lookScale = mouseSensitivity >= 1f ? mouseSensitivity * 0.06f : mouseSensitivity;
+        float lookScale = mouseSensitivity >= 1f
+            ? mouseSensitivity * 0.06f
+            : mouseSensitivity;
+
         float yaw = lookInput.x * lookScale;
+
         pitch -= lookInput.y * lookScale;
         pitch = Mathf.Clamp(pitch, minPitch, maxPitch);
 
@@ -303,20 +373,27 @@ public class PlayerController : MonoBehaviour
     void UpdateCrouch()
     {
         if (controller == null || cameraTransform == null)
-        {
             return;
-        }
 
         float targetHeight = crouchHeld ? crouchHeight : standingHeight;
         float targetCamY = crouchHeld ? crouchCameraHeight : standCameraHeight;
-        controller.height = Mathf.Lerp(controller.height, targetHeight, crouchLerpSpeed * Time.deltaTime);
+
+        controller.height = Mathf.Lerp(
+            controller.height,
+            targetHeight,
+            crouchLerpSpeed * Time.deltaTime);
 
         Vector3 center = standingCenter;
         center.y = controller.height * 0.5f;
         controller.center = center;
 
-        cameraHeightCurrent = Mathf.Lerp(cameraHeightCurrent, targetCamY, crouchLerpSpeed * Time.deltaTime);
+        cameraHeightCurrent = Mathf.Lerp(
+            cameraHeightCurrent,
+            targetCamY,
+            crouchLerpSpeed * Time.deltaTime);
+
         Vector3 rest = new Vector3(0f, cameraHeightCurrent, 0f);
+
         if (headBob != null)
         {
             headBob.SetRestLocalPosition(rest);
@@ -332,16 +409,18 @@ public class PlayerController : MonoBehaviour
     void TickInteraction()
     {
         if (interactionRaycaster == null)
-        {
             return;
-        }
 
         interactionRaycaster.Tick(BuildContext());
     }
 
     InteractionContext BuildContext()
     {
-        return new InteractionContext(this, cameraTransform, holdPoint, inventory);
+        return new InteractionContext(
+            this,
+            cameraTransform,
+            holdPoint,
+            inventory);
     }
 
     void ResolveCamera()
@@ -349,13 +428,16 @@ public class PlayerController : MonoBehaviour
         if (cameraTransform == null)
         {
             Camera childCam = GetComponentInChildren<Camera>();
+
             if (childCam != null)
             {
                 cameraTransform = childCam.transform;
             }
             else
             {
-                Debug.LogWarning("[PlayerController] Camera Transform is not assigned on " + name + ".", this);
+                Debug.LogWarning(
+                    "[PlayerController] Camera Transform is not assigned on " +
+                    name + ".", this);
             }
         }
     }
@@ -363,11 +445,10 @@ public class PlayerController : MonoBehaviour
     void EnsureHoldPoint()
     {
         if (holdPoint != null)
-        {
             return;
-        }
 
         Transform existing = transform.Find("HoldPoint");
+
         if (existing != null)
         {
             holdPoint = existing;
@@ -375,33 +456,29 @@ public class PlayerController : MonoBehaviour
         }
 
         if (cameraTransform == null)
-        {
             return;
-        }
 
         GameObject point = new GameObject("HoldPoint");
         point.transform.SetParent(cameraTransform);
         point.transform.localPosition = new Vector3(0.35f, -0.2f, 0.6f);
         point.transform.localRotation = Quaternion.identity;
+
         holdPoint = point.transform;
     }
 
     void EnsureInteraction()
     {
         if (interactionRaycaster == null)
-        {
             interactionRaycaster = GetComponent<InteractionRaycaster>();
-        }
 
         if (interactionRaycaster == null)
-        {
             interactionRaycaster = gameObject.AddComponent<InteractionRaycaster>();
-        }
 
         interactionRaycaster.RayOrigin = cameraTransform;
         interactionRaycaster.Range = pickupRange;
 
         InteractionHUD hud = FindFirstObjectByType<InteractionHUD>();
+
         if (hud == null)
         {
             GameObject hudObject = new GameObject("InteractionHUD");
@@ -414,26 +491,20 @@ public class PlayerController : MonoBehaviour
     void EnsureInventory()
     {
         if (inventory == null)
-        {
             inventory = GetComponent<InventorySystem>();
-        }
 
         if (inventory == null)
-        {
             inventory = gameObject.AddComponent<InventorySystem>();
-        }
 
         InteractionHUD hud = FindFirstObjectByType<InteractionHUD>();
+
         if (hud == null)
-        {
             return;
-        }
 
         HotbarHUD hotbar = hud.GetComponent<HotbarHUD>();
+
         if (hotbar == null)
-        {
             hotbar = hud.gameObject.AddComponent<HotbarHUD>();
-        }
 
         hotbar.Inventory = inventory;
     }
@@ -441,53 +512,41 @@ public class PlayerController : MonoBehaviour
     void EnsureHeadBobAndFootsteps()
     {
         if (cameraTransform == null)
-        {
             return;
-        }
 
         headBob = cameraTransform.GetComponent<HeadBob>();
+
         if (headBob == null)
-        {
             headBob = cameraTransform.gameObject.AddComponent<HeadBob>();
-        }
 
         if (GetComponent<FootstepEmitter>() == null)
-        {
             gameObject.AddComponent<FootstepEmitter>();
-        }
     }
 
     void EnsureGameUi()
     {
         if (GetComponent<ClueJournal>() == null)
-        {
             gameObject.AddComponent<ClueJournal>();
-        }
 
         if (GetComponent<ObjectiveTracker>() == null)
-        {
             gameObject.AddComponent<ObjectiveTracker>();
-        }
 
         InteractionHUD hud = FindFirstObjectByType<InteractionHUD>();
+
         if (hud == null)
-        {
             return;
-        }
 
         GameMenu menu = FindFirstObjectByType<GameMenu>();
+
         if (menu == null)
-        {
             menu = new GameObject("GameMenu").AddComponent<GameMenu>();
-        }
 
         menu.Bind(this);
 
         GameHUD gameHud = hud.GetComponent<GameHUD>();
+
         if (gameHud == null)
-        {
             gameHud = hud.gameObject.AddComponent<GameHUD>();
-        }
 
         gameHud.Bind(this, menu);
     }
