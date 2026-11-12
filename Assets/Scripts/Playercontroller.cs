@@ -6,7 +6,6 @@ using UnityEngine.Serialization;
 /// First-person move/look. Extends the original prototype: gravity, sprint, crouch, pitch clamp,
 /// cursor lock, InteractionRaycaster, and a five-slot InventorySystem (F / click to use on a target).
 /// </summary>
-[RequireComponent(typeof(CharacterController))]
 public class PlayerController : MonoBehaviour
 {
     [Header("Movement")]
