@@ -3,7 +3,7 @@ using UnityEngine;
 
 /// <summary>
 /// Camera-forward raycast that finds IInteractable and IItemUseTarget.
-/// Supports ordinary interactions and selected inventory item usage.
+/// Displays E and F interaction prompts.
 /// </summary>
 public class InteractionRaycaster : MonoBehaviour
 {
@@ -55,10 +55,7 @@ public class InteractionRaycaster : MonoBehaviour
             return;
         }
 
-        Ray ray = new Ray(
-            rayOrigin.position,
-            rayOrigin.forward
-        );
+        Ray ray = new Ray(rayOrigin.position, rayOrigin.forward);
 
         if (!Physics.Raycast(
             ray,
@@ -71,55 +68,56 @@ public class InteractionRaycaster : MonoBehaviour
             return;
         }
 
-        // Debug: show which object the camera is hitting.
         if (hit.collider != cachedCollider)
         {
             cachedCollider = hit.collider;
             Debug.Log("RAYCAST HIT: " + hit.collider.name);
         }
 
-        // Find interaction components on the hit object or its parents.
         cachedInteractable =
             hit.collider.GetComponentInParent<IInteractable>();
 
         cachedItemUseTarget =
             hit.collider.GetComponentInParent<IItemUseTarget>();
 
-        // Check ordinary interaction.
-        if (cachedInteractable != null &&
-            cachedInteractable.CanInteract(context))
+        // E interaction prompt.
+        if (cachedInteractable != null)
         {
-            cachedPrompt = cachedInteractable.GetPrompt(context);
-            HasTarget = true;
-        }
-        else
-        {
-            cachedInteractable = null;
+            if (cachedInteractable.CanInteract(context))
+            {
+                cachedPrompt = "Press E to interact";
+                HasTarget = true;
+
+                Debug.Log("INTERACTABLE DETECTED: Press E to interact");
+            }
+            else
+            {
+                Debug.Log("INTERACTABLE FOUND BUT CANNOT INTERACT");
+                cachedInteractable = null;
+            }
         }
 
-        // Check selected inventory item usage.
-        if (cachedItemUseTarget != null)
+        // F item-use prompt.
+        if (cachedItemUseTarget != null &&
+            context.Inventory != null)
         {
             ItemDefinition selectedItem =
-                context.Inventory != null
-                    ? context.Inventory.SelectedItem
-                    : null;
+                context.Inventory.SelectedItem;
 
-            if (selectedItem != null)
+            if (selectedItem != null &&
+                cachedItemUseTarget.CanUseItem(selectedItem, context))
             {
-                CurrentUsePrompt =
-                    cachedItemUseTarget.GetUsePrompt(
-                        selectedItem,
-                        context
-                    );
-            }
+                CurrentUsePrompt = "Press F to use";
+                HasTarget = true;
 
-            HasTarget = true;
+                Debug.Log("ITEM USE DETECTED: Press F to use");
+            }
         }
 
         if (!HasTarget)
         {
-            Clear();
+            cachedPrompt = "";
+            CurrentUsePrompt = "";
         }
     }
 
@@ -150,12 +148,8 @@ public class InteractionRaycaster : MonoBehaviour
         if (selectedItem == null)
             return false;
 
-        if (!cachedItemUseTarget.CanUseItem(
-            selectedItem,
-            context))
-        {
+        if (!cachedItemUseTarget.CanUseItem(selectedItem, context))
             return false;
-        }
 
         return cachedItemUseTarget.TryUseItem(
             selectedItem,

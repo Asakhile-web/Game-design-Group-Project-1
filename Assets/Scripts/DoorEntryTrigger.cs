@@ -7,12 +7,14 @@ public class DoorEntryTrigger : MonoBehaviour
 
     void OnTriggerEnter(Collider other)
     {
-        if (!other.CompareTag("Player"))
-            return;
+        Debug.Log("Something entered the door trigger: " + other.name);
 
-        if (door != null)
+        if (other.CompareTag("Player"))
         {
-            door.CloseDoor();
+            Debug.Log("Player detected! Closing door.");
+
+            if (door != null)
+                door.CloseDoor();
         }
     }
 }

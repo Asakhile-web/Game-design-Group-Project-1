@@ -7,6 +7,9 @@ public class AutomaticEntryDoor : MonoBehaviour
     [SerializeField] float closeAngle = 90f;
     [SerializeField] float closeSpeed = 2f;
 
+    [Header("Lock Connection")]
+    [SerializeField] LockedOpenable doorLock;
+
     Quaternion openRotation;
     Quaternion closedRotation;
     bool shouldClose;
@@ -37,6 +40,11 @@ public class AutomaticEntryDoor : MonoBehaviour
         {
             transform.localRotation = closedRotation;
             shouldClose = false;
+
+            if (doorLock != null)
+            {
+                doorLock.SetClosedPoseNow();
+            }
         }
     }
 }

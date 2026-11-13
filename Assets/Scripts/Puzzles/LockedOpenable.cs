@@ -1,9 +1,9 @@
+
 using UnityEngine;
 using UnityEngine.Events;
 
 /// <summary>
-/// Door, drawer, or locker lid: optional key, then a local rotate or slide. No Animator.
-/// Put this on the moving transform (hinge empty for doors, the drawer cube itself for slides).
+/// Door, drawer, or locker lid: optional key, then a local rotate or slide.
 /// </summary>
 public class LockedOpenable : MonoBehaviour, IInteractable, IItemUseTarget
 {
@@ -38,6 +38,7 @@ public class LockedOpenable : MonoBehaviour, IInteractable, IItemUseTarget
 
     public bool IsLocked => locked;
     public bool IsOpen => isOpen;
+
     public bool IsExit
     {
         get => isExit;
@@ -83,14 +84,28 @@ public class LockedOpenable : MonoBehaviour, IInteractable, IItemUseTarget
     void Update()
     {
         float target = isOpen ? 1f : 0f;
+
         if (Mathf.Approximately(openAmount, target))
-        {
             return;
-        }
 
         float speed = openDuration > 0.01f ? 1f / openDuration : 20f;
-        openAmount = Mathf.MoveTowards(openAmount, target, speed * Time.deltaTime);
+
+        openAmount = Mathf.MoveTowards(
+            openAmount,
+            target,
+            speed * Time.deltaTime
+        );
+
         ApplyPose(curve.Evaluate(openAmount));
+    }
+
+    // Updates the closed position after the automatic door has closed.
+    public void SetClosedPoseNow()
+    {
+        closedLocalPosition = transform.localPosition;
+        closedLocalRotation = transform.localRotation;
+        isOpen = false;
+        openAmount = 0f;
     }
 
     public bool CanInteract(InteractionContext context)
@@ -105,16 +120,20 @@ public class LockedOpenable : MonoBehaviour, IInteractable, IItemUseTarget
             if (isExit)
             {
                 PuzzleManager puzzles = PuzzleManager.Instance;
+
                 if (puzzles != null && puzzles.AreAllRequiredSolved())
-                {
                     return "Press E to leave";
-                }
 
                 return "Locked — solve the remaining puzzles";
             }
 
-            string need = requiredItem != null ? requiredItem.DisplayName : "a key";
-            if (requiredItem != null && context.Inventory != null && context.Inventory.Has(requiredItem))
+            string need = requiredItem != null
+                ? requiredItem.DisplayName
+                : "a key";
+
+            if (requiredItem != null &&
+                context.Inventory != null &&
+                context.Inventory.Has(requiredItem))
             {
                 return "Press E to unlock with " + need;
             }
@@ -122,7 +141,9 @@ public class LockedOpenable : MonoBehaviour, IInteractable, IItemUseTarget
             return "Locked — need " + need;
         }
 
-        return isOpen ? "Press E to " + openVerb : "Press E to " + closedVerb;
+        return isOpen
+            ? "Press E to " + openVerb
+            : "Press E to " + closedVerb;
     }
 
     public void Interact(InteractionContext context)
@@ -132,6 +153,7 @@ public class LockedOpenable : MonoBehaviour, IInteractable, IItemUseTarget
             if (isExit)
             {
                 PuzzleManager puzzles = PuzzleManager.Instance;
+
                 if (puzzles != null && puzzles.AreAllRequiredSolved())
                 {
                     Unlock(openAfter: true);
@@ -143,13 +165,18 @@ public class LockedOpenable : MonoBehaviour, IInteractable, IItemUseTarget
                 return;
             }
 
-            if (requiredItem != null && context.Inventory != null && context.Inventory.Has(requiredItem))
+            if (requiredItem != null &&
+                context.Inventory != null &&
+                context.Inventory.Has(requiredItem))
             {
                 TryUnlockWith(requiredItem, context, openAfter: true);
                 return;
             }
 
-            string need = requiredItem != null ? requiredItem.DisplayName : "a key";
+            string need = requiredItem != null
+                ? requiredItem.DisplayName
+                : "a key";
+
             InteractionHUD.Toast("Locked — need " + need);
             return;
         }
@@ -159,20 +186,19 @@ public class LockedOpenable : MonoBehaviour, IInteractable, IItemUseTarget
 
     public bool CanUseItem(ItemDefinition item, InteractionContext context)
     {
-        return locked && item != null && requiredItem != null && item.Matches(requiredItem);
+        return locked &&
+               item != null &&
+               requiredItem != null &&
+               item.Matches(requiredItem);
     }
 
     public string GetUsePrompt(ItemDefinition item, InteractionContext context)
     {
         if (CanUseItem(item, context))
-        {
             return "Press F to use " + item.DisplayName;
-        }
 
         if (locked && item != null && requiredItem != null)
-        {
             return "Wrong item (need " + requiredItem.DisplayName + ")";
-        }
 
         return string.Empty;
     }
@@ -182,9 +208,7 @@ public class LockedOpenable : MonoBehaviour, IInteractable, IItemUseTarget
         if (!CanUseItem(item, context))
         {
             if (locked && requiredItem != null)
-            {
                 InteractionHUD.Toast("Need " + requiredItem.DisplayName);
-            }
 
             return false;
         }
@@ -195,8 +219,10 @@ public class LockedOpenable : MonoBehaviour, IInteractable, IItemUseTarget
     public void Unlock(bool openAfter)
     {
         locked = false;
+
         onUnlocked?.Invoke();
         AudioManager.Play(AudioCue.Door);
+
         if (openAfter && !isOpen)
         {
             isOpen = true;
@@ -208,29 +234,34 @@ public class LockedOpenable : MonoBehaviour, IInteractable, IItemUseTarget
     public void Toggle()
     {
         isOpen = !isOpen;
+
         AudioManager.Play(AudioCue.Door);
         CameraImpulse.Shake(0.06f, 0.12f);
+
         if (isOpen)
-        {
             onOpened?.Invoke();
-        }
 
         if (isExit && isOpen)
-        {
             PuzzleManager.Instance?.NotifyExitUsed();
-        }
     }
 
-    bool TryUnlockWith(ItemDefinition item, InteractionContext context, bool openAfter)
+    bool TryUnlockWith(
+        ItemDefinition item,
+        InteractionContext context,
+        bool openAfter)
     {
-        if (consumeRequiredItem && item.ConsumeOnUse && context.Inventory != null)
+        if (consumeRequiredItem &&
+            item.ConsumeOnUse &&
+            context.Inventory != null)
         {
             context.Inventory.TryConsume(item);
         }
 
         Unlock(openAfter);
+
         InteractionHUD.Toast("Unlocked");
         Debug.Log("[LockedOpenable] Unlocked " + name, this);
+
         return true;
     }
 
@@ -238,13 +269,21 @@ public class LockedOpenable : MonoBehaviour, IInteractable, IItemUseTarget
     {
         if (motion == OpenMotion.SlideLocal)
         {
-            transform.localPosition = closedLocalPosition + slideOffset * t;
+            transform.localPosition =
+                closedLocalPosition + slideOffset * t;
+
             transform.localRotation = closedLocalRotation;
             return;
         }
 
-        Vector3 axis = motion == OpenMotion.RotatePitch ? Vector3.right : Vector3.up;
-        transform.localRotation = closedLocalRotation * Quaternion.AngleAxis(openAngle * t, axis);
+        Vector3 axis = motion == OpenMotion.RotatePitch
+            ? Vector3.right
+            : Vector3.up;
+
+        transform.localRotation =
+            closedLocalRotation *
+            Quaternion.AngleAxis(openAngle * t, axis);
+
         transform.localPosition = closedLocalPosition;
     }
 }
