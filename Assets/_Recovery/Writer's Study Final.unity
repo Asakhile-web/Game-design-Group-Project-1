@@ -262233,7 +262233,7 @@ GameObject:
   - component: {fileID: 1522957038}
   - component: {fileID: 1522957037}
   m_Layer: 0
-  m_Name: Cube.036 (2)
+  m_Name: Writer's Journal
   m_TagString: Pickup
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -354632,7 +354632,7 @@ Transform:
   m_GameObject: {fileID: 1943308515}
   serializedVersion: 2
   m_LocalRotation: {x: 0.7071041, y: 0.0015355506, z: -0.001527653, w: 0.70710623}
-  m_LocalPosition: {x: -0.062, y: 0.064, z: 0.406}
+  m_LocalPosition: {x: -0.06233595, y: 0.06362005, z: 0.42956048}
   m_LocalScale: {x: 0.11236475, y: 0.8627865, z: 0.70639724}
   m_ConstrainProportionsScale: 0
   m_Children:
