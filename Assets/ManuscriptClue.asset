@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0b3ead3f090c4d5fb4d5e83392d80ee1, type: 3}
+  m_Name: ManuscriptClue
+  m_EditorClassIdentifier: Assembly-CSharp::ClueDefinition
+  id: clue_manuscript
+  title: The Final Manuscript
+  description: 'The final pages reveal that Edmund discovered someone had been using
+    his identity. He planned to disappear to expose the truth. The photograph proves
+    he was still alive ten years after his supposed disappearance. But the final
+    page contains one last message: "If you are reading this, the person who sent
+    you here knows where you are."'
+  image: {fileID: 0}

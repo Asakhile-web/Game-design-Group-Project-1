@@ -77,8 +77,13 @@ public class PlayerController : MonoBehaviour
     void Awake()
     {
         controller = GetComponent<CharacterController>();
-        standingHeight = controller.height;
-        standingCenter = controller.center;
+
+        if (controller != null)
+        {
+            standingHeight = controller.height;
+            standingCenter = controller.center;
+        }
+
         cameraHeightCurrent = standCameraHeight;
         inputActions = new PlayerInputActions();
 
@@ -194,13 +199,12 @@ public class PlayerController : MonoBehaviour
         crouchHeld = context.ReadValueAsButton();
     }
 
-    // E picks up an object or drops the currently held object.
+    // E drops held objects or interacts with inventory pickups.
     void OnInteract(InputAction.CallbackContext context)
     {
         if (!context.performed || !controlEnabled)
             return;
 
-        // If already holding an object, E drops it.
         if (heldObject != null)
         {
             DropObject();
@@ -214,9 +218,25 @@ public class PlayerController : MonoBehaviour
 
         if (Physics.Raycast(ray, out RaycastHit hit, pickupDistance))
         {
+            // Handle inventory pickups before ordinary physics pickups.
+            ItemPickup itemPickup =
+                hit.collider.GetComponentInParent<ItemPickup>();
+
+            if (itemPickup != null)
+            {
+                InteractionContext itemContext = BuildContext();
+
+                if (interactionRaycaster != null)
+                {
+                    interactionRaycaster.TryInteract(itemContext);
+                }
+
+                return;
+            }
+
+            // Ordinary objects can still be picked up and dropped.
             Rigidbody rb = hit.collider.GetComponentInParent<Rigidbody>();
 
-            // Pick up only objects tagged Pickup.
             if (rb != null && rb.CompareTag("Pickup"))
             {
                 PickupObject(rb);
@@ -224,7 +244,6 @@ public class PlayerController : MonoBehaviour
             }
         }
 
-        // If no pickup object was found, use the existing interaction system.
         InteractionContext interaction = BuildContext();
 
         if (interactionRaycaster != null)

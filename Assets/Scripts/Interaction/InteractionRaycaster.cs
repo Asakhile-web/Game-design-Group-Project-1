@@ -1,35 +1,32 @@
+
 using UnityEngine;
 
 /// <summary>
 /// Camera-forward raycast that finds IInteractable and IItemUseTarget.
-/// Caches the last collider so GetComponent is not called every frame.
+/// Supports ordinary interactions and selected inventory item usage.
 /// </summary>
 public class InteractionRaycaster : MonoBehaviour
 {
-    [SerializeField] Transform rayOrigin;
-    [SerializeField] float range = 3f;
-    [SerializeField] LayerMask hitMask = ~0;
-    [SerializeField] QueryTriggerInteraction triggerInteraction = QueryTriggerInteraction.Ignore;
+    [Header("Raycast Settings")]
+    [SerializeField] private Transform rayOrigin;
+    [SerializeField] private float range = 3f;
+    [SerializeField] private LayerMask hitMask = ~0;
+    [SerializeField] private QueryTriggerInteraction triggerInteraction =
+        QueryTriggerInteraction.Ignore;
 
-    Collider cachedCollider;
-    IInteractable cachedInteractable;
-    IItemUseTarget cachedUseTarget;
-    string cachedPrompt = string.Empty;
-    string cachedUsePrompt = string.Empty;
-    bool hasTarget;
+    private IInteractable cachedInteractable;
+    private IItemUseTarget cachedItemUseTarget;
+    private Collider cachedCollider;
 
-    public bool HasTarget => hasTarget;
-    public IInteractable Current => hasTarget ? cachedInteractable : null;
-    public IItemUseTarget CurrentUseTarget => hasTarget ? cachedUseTarget : null;
-    public string CurrentPrompt => hasTarget ? cachedPrompt : string.Empty;
-    public string CurrentUsePrompt => hasTarget ? cachedUsePrompt : string.Empty;
-    public Collider CurrentCollider => hasTarget ? cachedCollider : null;
+    private string cachedPrompt = "";
 
-    public float Range
-    {
-        get => range;
-        set => range = value;
-    }
+    public bool HasTarget { get; private set; }
+
+    public Collider CurrentCollider => cachedCollider;
+
+    public string CurrentPrompt => cachedPrompt;
+
+    public string CurrentUsePrompt { get; private set; } = "";
 
     public Transform RayOrigin
     {
@@ -37,127 +34,144 @@ public class InteractionRaycaster : MonoBehaviour
         set => rayOrigin = value;
     }
 
-    /// <summary>
-    /// Call from PlayerController each frame. Do not enable a second Update raycast on this component.
-    /// </summary>
+    public float Range
+    {
+        get => range;
+        set => range = value;
+    }
+
     public void Tick(InteractionContext context)
     {
+        HasTarget = false;
+        cachedPrompt = "";
+        CurrentUsePrompt = "";
+
+        cachedInteractable = null;
+        cachedItemUseTarget = null;
+
         if (rayOrigin == null)
         {
-            hasTarget = false;
+            cachedCollider = null;
             return;
         }
 
-        Ray ray = new Ray(rayOrigin.position, rayOrigin.forward);
-        if (!Physics.Raycast(ray, out RaycastHit hit, range, hitMask, triggerInteraction))
+        Ray ray = new Ray(
+            rayOrigin.position,
+            rayOrigin.forward
+        );
+
+        if (!Physics.Raycast(
+            ray,
+            out RaycastHit hit,
+            range,
+            hitMask,
+            triggerInteraction))
         {
-            Clear();
+            cachedCollider = null;
             return;
         }
 
+        // Debug: show which object the camera is hitting.
         if (hit.collider != cachedCollider)
         {
             cachedCollider = hit.collider;
-            cachedInteractable = ResolveInteractable(hit.collider);
-            cachedUseTarget = ResolveUseTarget(hit.collider);
+            Debug.Log("RAYCAST HIT: " + hit.collider.name);
         }
 
-        bool interactOk = cachedInteractable != null && cachedInteractable.CanInteract(context);
-        bool useOk = cachedUseTarget != null;
+        // Find interaction components on the hit object or its parents.
+        cachedInteractable =
+            hit.collider.GetComponentInParent<IInteractable>();
 
-        if (!interactOk && !useOk)
+        cachedItemUseTarget =
+            hit.collider.GetComponentInParent<IItemUseTarget>();
+
+        // Check ordinary interaction.
+        if (cachedInteractable != null &&
+            cachedInteractable.CanInteract(context))
+        {
+            cachedPrompt = cachedInteractable.GetPrompt(context);
+            HasTarget = true;
+        }
+        else
+        {
+            cachedInteractable = null;
+        }
+
+        // Check selected inventory item usage.
+        if (cachedItemUseTarget != null)
+        {
+            ItemDefinition selectedItem =
+                context.Inventory != null
+                    ? context.Inventory.SelectedItem
+                    : null;
+
+            if (selectedItem != null)
+            {
+                CurrentUsePrompt =
+                    cachedItemUseTarget.GetUsePrompt(
+                        selectedItem,
+                        context
+                    );
+            }
+
+            HasTarget = true;
+        }
+
+        if (!HasTarget)
         {
             Clear();
-            return;
-        }
-
-        hasTarget = true;
-        cachedPrompt = interactOk ? cachedInteractable.GetPrompt(context) : string.Empty;
-
-        ItemDefinition selected = context.Inventory != null ? context.Inventory.SelectedItem : null;
-        cachedUsePrompt = string.Empty;
-        if (cachedUseTarget != null && selected != null)
-        {
-            cachedUsePrompt = cachedUseTarget.GetUsePrompt(selected, context);
         }
     }
 
     public bool TryInteract(InteractionContext context)
     {
-        Tick(context);
-        if (!hasTarget || cachedInteractable == null || !cachedInteractable.CanInteract(context))
-        {
+        if (cachedInteractable == null)
             return false;
-        }
+
+        if (!cachedInteractable.CanInteract(context))
+            return false;
 
         cachedInteractable.Interact(context);
+
         return true;
     }
 
     public bool TryUseSelectedItem(InteractionContext context)
     {
-        Tick(context);
-        InventorySystem inventory = context.Inventory;
-        if (inventory == null)
+        if (cachedItemUseTarget == null)
+            return false;
+
+        if (context.Inventory == null)
+            return false;
+
+        ItemDefinition selectedItem =
+            context.Inventory.SelectedItem;
+
+        if (selectedItem == null)
+            return false;
+
+        if (!cachedItemUseTarget.CanUseItem(
+            selectedItem,
+            context))
         {
-            Debug.LogWarning("[InteractionRaycaster] No InventorySystem on player.");
             return false;
         }
 
-        ItemDefinition selected = inventory.SelectedItem;
-        if (selected == null)
-        {
-            return false;
-        }
-
-        if (!hasTarget || cachedUseTarget == null)
-        {
-            return false;
-        }
-
-        return cachedUseTarget.TryUseItem(selected, context);
+        return cachedItemUseTarget.TryUseItem(
+            selectedItem,
+            context
+        );
     }
 
-    static IInteractable ResolveInteractable(Collider col)
+    public void Clear()
     {
-        IInteractable interactable = col.GetComponentInParent<IInteractable>();
-        if (interactable != null)
-        {
-            return interactable;
-        }
+        HasTarget = false;
 
-        if (col.CompareTag("Pickup"))
-        {
-            ItemPickup itemPickup = col.GetComponent<ItemPickup>();
-            if (itemPickup != null)
-            {
-                return itemPickup;
-            }
-
-            PickupHoldInteractable pickup = col.GetComponent<PickupHoldInteractable>();
-            if (pickup == null)
-            {
-                pickup = col.gameObject.AddComponent<PickupHoldInteractable>();
-            }
-
-            return pickup;
-        }
-
-        return null;
-    }
-
-    static IItemUseTarget ResolveUseTarget(Collider col)
-    {
-        return col.GetComponentInParent<IItemUseTarget>();
-    }
-
-    void Clear()
-    {
-        cachedCollider = null;
         cachedInteractable = null;
-        cachedUseTarget = null;
-        cachedPrompt = string.Empty;
-        cachedUsePrompt = string.Empty;
-        hasTarget = false;
+        cachedItemUseTarget = null;
+        cachedCollider = null;
+
+        cachedPrompt = "";
+        CurrentUsePrompt = "";
     }
 }

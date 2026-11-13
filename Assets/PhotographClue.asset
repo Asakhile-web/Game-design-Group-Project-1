@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0b3ead3f090c4d5fb4d5e83392d80ee1, type: 3}
+  m_Name: PhotographClue
+  m_EditorClassIdentifier: Assembly-CSharp::ClueDefinition
+  id: clue_photograph
+  title: The Photograph
+  description: The photograph shows Edmund standing inside his study. However, the
+    date written on the back is ten years after his supposed disappearance. Someone
+    has been hiding the truth about what happened to him.
+  image: {fileID: 0}
