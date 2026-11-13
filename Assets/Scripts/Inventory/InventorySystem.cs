@@ -6,7 +6,7 @@ using UnityEngine;
 /// </summary>
 public class InventorySystem : MonoBehaviour
 {
-    public const int SlotCount = 5;
+    public const int SlotCount = 3;
 
     readonly ItemDefinition[] slots = new ItemDefinition[SlotCount];
     int selectedIndex;

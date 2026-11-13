@@ -113006,8 +113006,8 @@ Transform:
   - {fileID: 944679267}
   - {fileID: 767577440}
   - {fileID: 1987668734}
-  - {fileID: 1564559747}
   - {fileID: 491229400}
+  - {fileID: 1564559747}
   - {fileID: 464465263}
   - {fileID: 1161907006}
   - {fileID: 813459567}
@@ -256071,6 +256071,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Glasses
       objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: ce437f0869e2a324e801e2eab4142f10, type: 3}
+      propertyPath: m_TagString
+      value: Pickup
+      objectReference: {fileID: 0}
     - target: {fileID: 2661215666156734702, guid: ce437f0869e2a324e801e2eab4142f10, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
@@ -256086,7 +256090,13 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: ce437f0869e2a324e801e2eab4142f10, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1718466508}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: ce437f0869e2a324e801e2eab4142f10, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1718466509}
   m_SourcePrefab: {fileID: 100100000, guid: ce437f0869e2a324e801e2eab4142f10, type: 3}
 --- !u!4 &1422071632 stripped
 Transform:
@@ -341527,6 +341537,46 @@ MonoBehaviour:
   m_SelectedFaces: 
   m_SelectedEdges: []
   m_SelectedVertices: 
+--- !u!1 &1718466505 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: ce437f0869e2a324e801e2eab4142f10, type: 3}
+  m_PrefabInstance: {fileID: 1422071631}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1718466508
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1718466505}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 414aecbc95318b04ba0467e54cb3a564, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ItemPickup
+  definition: {fileID: 11400000, guid: 6ae1480d526e9234db2adc14539491ef, type: 2}
+  disableAfterPickup: 1
+--- !u!65 &1718466509
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1718466505}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 2.0999997, y: 2.1, z: 0.10000007}
+  m_Center: {x: 0, y: -0.0000038146973, z: 0.000007627532}
 --- !u!43 &1728463426
 Mesh:
   m_ObjectHideFlags: 0
