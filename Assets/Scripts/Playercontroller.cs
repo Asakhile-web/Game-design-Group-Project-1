@@ -54,6 +54,7 @@ public class PlayerController : MonoBehaviour
     Vector3 standingCenter;
     float cameraHeightCurrent;
     bool controlEnabled = true;
+    float originalStepOffset;
 
     public bool ControlEnabled
     {
@@ -61,7 +62,7 @@ public class PlayerController : MonoBehaviour
         set => controlEnabled = value;
     }
 
-    public bool IsGrounded => controller != null && controller.isGrounded;
+    public bool IsGrounded => controller != null && controller.enabled && controller.isGrounded;
     public bool IsSprinting => sprintHeld && !crouchHeld && IsMoving;
     public bool IsMoving => moveInput.sqrMagnitude > 0.01f;
     public Transform CameraTransform => cameraTransform;
@@ -82,6 +83,7 @@ public class PlayerController : MonoBehaviour
         {
             standingHeight = controller.height;
             standingCenter = controller.center;
+            originalStepOffset = controller.stepOffset;
         }
 
         cameraHeightCurrent = standCameraHeight;
@@ -199,7 +201,6 @@ public class PlayerController : MonoBehaviour
         crouchHeld = context.ReadValueAsButton();
     }
 
-    // E drops held objects or interacts with inventory pickups.
     void OnInteract(InputAction.CallbackContext context)
     {
         if (!context.performed || !controlEnabled)
@@ -218,7 +219,6 @@ public class PlayerController : MonoBehaviour
 
         if (Physics.Raycast(ray, out RaycastHit hit, pickupDistance))
         {
-            // Handle inventory pickups before ordinary physics pickups.
             ItemPickup itemPickup =
                 hit.collider.GetComponentInParent<ItemPickup>();
 
@@ -234,7 +234,6 @@ public class PlayerController : MonoBehaviour
                 return;
             }
 
-            // Ordinary objects can still be picked up and dropped.
             Rigidbody rb = hit.collider.GetComponentInParent<Rigidbody>();
 
             if (rb != null && rb.CompareTag("Pickup"))
@@ -266,15 +265,18 @@ public class PlayerController : MonoBehaviour
 
         heldObject = rb;
 
-        heldObject.transform.SetParent(holdPoint);
-        heldObject.transform.localPosition = Vector3.zero;
-        heldObject.transform.localRotation = Quaternion.identity;
+        if (!rb.isKinematic)
+        {
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+        }
 
-        heldObject.isKinematic = true;
-        heldObject.useGravity = false;
+        rb.transform.SetParent(holdPoint);
+        rb.transform.localPosition = Vector3.zero;
+        rb.transform.localRotation = Quaternion.identity;
 
-        heldObject.linearVelocity = Vector3.zero;
-        heldObject.angularVelocity = Vector3.zero;
+        rb.isKinematic = true;
+        rb.useGravity = false;
 
         if (pickupDropAudio != null && pickupSound != null)
         {
@@ -290,7 +292,6 @@ public class PlayerController : MonoBehaviour
             return;
 
         Rigidbody objectToDrop = heldObject;
-
         heldObject = null;
 
         objectToDrop.transform.SetParent(null);
@@ -335,7 +336,8 @@ public class PlayerController : MonoBehaviour
 
     void Move()
     {
-        if (controller == null)
+        if (controller == null || !controller.enabled ||
+            !controller.gameObject.activeInHierarchy)
             return;
 
         float speed = moveSpeed;
@@ -390,16 +392,24 @@ public class PlayerController : MonoBehaviour
 
     void UpdateCrouch()
     {
-        if (controller == null || cameraTransform == null)
+        if (controller == null || !controller.enabled ||
+            cameraTransform == null)
             return;
 
         float targetHeight = crouchHeld ? crouchHeight : standingHeight;
         float targetCamY = crouchHeld ? crouchCameraHeight : standCameraHeight;
 
-        controller.height = Mathf.Lerp(
+        float newHeight = Mathf.Lerp(
             controller.height,
             targetHeight,
             crouchLerpSpeed * Time.deltaTime);
+
+        controller.height = newHeight;
+
+        // Keep Step Offset valid as the controller becomes shorter.
+        controller.stepOffset = Mathf.Min(
+            originalStepOffset,
+            newHeight * 0.5f);
 
         Vector3 center = standingCenter;
         center.y = controller.height * 0.5f;
